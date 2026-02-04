@@ -45,6 +45,7 @@
         {% endif %}
     </div>
 
+    {% if not view_only %}
     <div class="act-actions">
         {% if not act.actual_start %}
             <button class="btn btn-start"
@@ -61,9 +62,10 @@
         {% endif %}
         {% if act.actual_start or act.actual_end %}
             <button class="btn btn-clear"
-                    @click="$dispatch('show-confirm', {message: 'Clear recorded times for {{ act.act_name }}?', url: '/acts/{{ act.act_name | urlencode }}/clear'})">
+                    @click="confirm('Clear recorded times for {{ act.act_name }}?', '/acts/{{ act.act_name | urlencode }}/clear')">
                 Clear
             </button>
         {% endif %}
     </div>
+    {% endif %}
 </div>

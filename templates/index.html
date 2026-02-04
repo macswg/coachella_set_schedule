@@ -3,7 +3,7 @@
 {% block title %}{{ stage_name }} - Festival Schedule{% endblock %}
 
 {% block content %}
-<div class="container" x-data="scheduleApp()" x-init="init()" @show-confirm.window="showConfirm($event.detail.message, $event.detail.url)">
+<div class="container" x-data="scheduleApp()" x-init="init()">
     <!-- Header -->
     <header class="header">
         <div class="header-left">
@@ -11,6 +11,7 @@
         </div>
         <div class="header-center">
             <div class="current-time" x-text="currentTime"></div>
+            {% if not view_only %}
             <!-- TEST ONLY: Time override -->
             <div class="time-override">
                 <input type="time"
@@ -20,8 +21,13 @@
                        placeholder="HH:MM:SS">
                 <button x-show="timeOverride" @click="clearTimeOverride()" class="btn-clear-time">Live</button>
             </div>
+            {% endif %}
         </div>
         <div class="header-right">
+            <div class="brightness-display">
+                <span class="brightness-label">Brightness:</span>
+                <span class="brightness-value" x-text="brightness + ' nits'"></span>
+            </div>
             <div class="slip-display" :class="{ 'slip-warning': slip > 0 }">
                 <span class="slip-label">Slip:</span>
                 <span class="slip-value" x-text="formatSlip(slip)"></span>
@@ -54,8 +60,13 @@
     </section>
 
     <!-- Schedule List -->
-    <main class="schedule" hx-ext="ws" ws-connect="/ws">
-        <div class="schedule-list" id="schedule-list">
+    <main class="schedule" hx-ext="ws" ws-connect="/ws?mode={% if view_only %}view{% else %}edit{% endif %}">
+        <div class="schedule-header">
+            <button class="btn-toggle-completed" @click="hideCompleted = !hideCompleted">
+                <span x-text="hideCompleted ? 'Show Completed' : 'Hide Completed'"></span>
+            </button>
+        </div>
+        <div class="schedule-list" id="schedule-list" :class="{ 'hide-completed': hideCompleted }">
             {% for act in acts %}
                 {% include "components/act_row.html" %}
             {% endfor %}
@@ -63,12 +74,12 @@
     </main>
 
     <!-- Confirmation Modal -->
-    <div class="modal-overlay" x-show="showConfirmModal" x-cloak @click.self="confirmNo()" @keydown.escape.window="showConfirmModal && confirmNo()">
+    <div class="modal-overlay" x-show="confirmUrl" x-cloak @click.self="confirmUrl = ''" @keydown.escape.window="confirmUrl = ''">
         <div class="modal-box">
             <p class="modal-message" x-text="confirmMessage"></p>
             <div class="modal-actions">
-                <button class="btn btn-modal-cancel" @click="confirmNo()">Cancel</button>
-                <button class="btn btn-modal-confirm" @click="confirmYes()">Clear</button>
+                <button class="btn btn-modal-cancel" @click="confirmUrl = ''">Cancel</button>
+                <button class="btn btn-modal-confirm" @click="fetch(confirmUrl, {method: 'POST'}); confirmUrl = ''">Clear</button>
             </div>
         </div>
     </div>
@@ -79,9 +90,9 @@ function scheduleApp() {
     return {
         currentTime: '',
         slip: {{ slip }},
+        brightness: 0,
         timeOverride: '',
         frozenTime: null,
-        showConfirmModal: false,
         confirmMessage: '',
         confirmUrl: '',
         nowPlaying: null,
@@ -89,10 +100,42 @@ function scheduleApp() {
         countdown: '',
         isOvertime: false,
         isLateStart: false,
+        hideCompleted: true,
 
         init() {
             this.updateTime();
             setInterval(() => this.updateTime(), 1000);
+            this.fetchBrightness();
+            this.setupBrightnessListener();
+        },
+
+        async fetchBrightness() {
+            try {
+                const response = await fetch('/api/brightness');
+                const data = await response.json();
+                this.brightness = data.value;
+            } catch (e) {
+                console.error('Failed to fetch brightness:', e);
+            }
+        },
+
+        setupBrightnessListener() {
+            // Listen for HTMX WebSocket messages before they're processed
+            const self = this;
+            document.body.addEventListener('htmx:wsBeforeMessage', function(event) {
+                const message = event.detail.message;
+                console.log('[WS] Received:', message);
+                try {
+                    const data = JSON.parse(message);
+                    if (data.type === 'brightness') {
+                        console.log('[WS] Brightness update:', data.value);
+                        self.brightness = data.value;
+                        event.preventDefault(); // Don't let HTMX process this as HTML
+                    }
+                } catch (e) {
+                    // Not JSON, let HTMX handle it
+                }
+            });
         },
 
         updateTime() {
@@ -267,23 +310,9 @@ function scheduleApp() {
             this.slip = newSlip;
         },
 
-        showConfirm(message, url) {
+        confirm(message, url) {
             this.confirmMessage = message;
             this.confirmUrl = url;
-            this.showConfirmModal = true;
-        },
-
-        confirmNo() {
-            this.showConfirmModal = false;
-            this.confirmUrl = '';
-        },
-
-        confirmYes() {
-            if (this.confirmUrl) {
-                fetch(this.confirmUrl, { method: 'POST' });
-            }
-            this.showConfirmModal = false;
-            this.confirmUrl = '';
         }
     }
 }

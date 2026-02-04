@@ -39,4 +39,5 @@ pkill -f "uvicorn main:app"
 - Slip tracking (accumulated lateness)
 - Record actual start/end times for each act
 - Real-time sync across multiple browser windows via WebSocket
+- Mobile-friendly custom confirmation dialogs (immune to browser "prevent dialogs" setting)
 - Dark theme UI

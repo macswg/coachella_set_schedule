@@ -23,5 +23,12 @@ class Settings:
     HOST: str = os.getenv("HOST", "0.0.0.0")
     PORT: int = int(os.getenv("PORT", "8000"))
 
+    # Art-Net configuration
+    ARTNET_ENABLED: bool = os.getenv("ARTNET_ENABLED", "false").lower() == "true"
+    ARTNET_PORT: int = int(os.getenv("ARTNET_PORT", "6454"))
+    ARTNET_UNIVERSE: int = int(os.getenv("ARTNET_UNIVERSE", "0"))
+    ARTNET_CHANNEL_HIGH: int = int(os.getenv("ARTNET_CHANNEL_HIGH", "1"))
+    ARTNET_CHANNEL_LOW: int = int(os.getenv("ARTNET_CHANNEL_LOW", "2"))
+
 
 settings = Settings()

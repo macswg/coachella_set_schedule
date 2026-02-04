@@ -74,11 +74,13 @@ body {
     color: var(--text-primary);
 }
 
-.slip-display {
+.slip-display,
+.brightness-display {
     text-align: right;
 }
 
-.slip-label {
+.slip-label,
+.brightness-label {
     color: var(--text-secondary);
     font-size: 0.875rem;
     display: block;
@@ -88,6 +90,17 @@ body {
     font-size: 1.25rem;
     font-weight: 600;
     color: var(--accent-secondary);
+}
+
+.brightness-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--accent-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.brightness-display {
+    margin-bottom: 8px;
 }
 
 .slip-warning .slip-value {
@@ -195,9 +208,36 @@ body {
     overflow: hidden;
 }
 
+.schedule-header {
+    display: flex;
+    justify-content: flex-end;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.btn-toggle-completed {
+    background-color: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-toggle-completed:hover {
+    background-color: var(--border-color);
+    color: var(--text-primary);
+}
+
 .schedule-list {
     display: flex;
     flex-direction: column;
+}
+
+.schedule-list.hide-completed .act-complete {
+    display: none;
 }
 
 /* Act Row */
@@ -382,7 +422,18 @@ body {
         text-align: center;
     }
 
-    .slip-label {
+    .brightness-display {
+        display: inline-block;
+        margin-right: 16px;
+        margin-bottom: 0;
+    }
+
+    .slip-display {
+        display: inline-block;
+    }
+
+    .slip-label,
+    .brightness-label {
         display: inline;
     }
 
@@ -419,6 +470,16 @@ body {
     /* Schedule List - Mobile */
     .schedule {
         border-radius: 8px;
+    }
+
+    .schedule-header {
+        padding: 10px 12px;
+    }
+
+    .btn-toggle-completed {
+        min-height: 44px;
+        padding: 10px 16px;
+        font-size: 0.875rem;
     }
 
     .act-row {
@@ -484,6 +545,15 @@ body {
 
     .header {
         padding: 12px;
+    }
+
+    .schedule-header {
+        padding: 8px 10px;
+    }
+
+    .btn-toggle-completed {
+        padding: 10px 12px;
+        font-size: 0.8rem;
     }
 
     .np-artist {
