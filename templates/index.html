@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}{{ stage_name }} - Festival Schedule{% endblock %}
+
+{% block content %}
+<div class="container" x-data="scheduleApp()" x-init="init()" @show-confirm.window="showConfirm($event.detail.message, $event.detail.url)">
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <h1>{{ stage_name }}</h1>
+        </div>
+        <div class="header-center">
+            <div class="current-time" x-text="currentTime"></div>
+            <!-- TEST ONLY: Time override -->
+            <div class="time-override">
+                <input type="time"
+                       x-model="timeOverride"
+                       @change="applyTimeOverride()"
+                       step="1"
+                       placeholder="HH:MM:SS">
+                <button x-show="timeOverride" @click="clearTimeOverride()" class="btn-clear-time">Live</button>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="slip-display" :class="{ 'slip-warning': slip > 0 }">
+                <span class="slip-label">Slip:</span>
+                <span class="slip-value" x-text="formatSlip(slip)"></span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Now Playing / Up Next Section -->
+    <section class="now-playing-section">
+        <template x-if="nowPlaying">
+            <div class="now-playing" :class="{ 'is-overtime': isOvertime }">
+                <span class="np-label">Now Playing</span>
+                <span class="np-artist" x-text="nowPlaying"></span>
+                <div class="np-countdown-wrap">
+                    <span class="np-countdown" :class="{ 'overtime': isOvertime }" x-text="countdown"></span>
+                    <span class="np-suffix" x-text="isOvertime ? 'over' : 'remaining'"></span>
+                </div>
+            </div>
+        </template>
+        <template x-if="!nowPlaying && upNext">
+            <div class="up-next" :class="{ 'is-late-start': isLateStart }">
+                <span class="np-label" x-text="isLateStart ? 'Should Be On' : 'Up Next'"></span>
+                <span class="np-artist" x-text="upNext"></span>
+                <div class="np-countdown-wrap">
+                    <span class="np-countdown" :class="{ 'late-start': isLateStart }" x-text="countdown"></span>
+                    <span class="np-suffix" x-text="isLateStart ? 'late' : 'until start'"></span>
+                </div>
+            </div>
+        </template>
+    </section>
+
+    <!-- Schedule List -->
+    <main class="schedule" hx-ext="ws" ws-connect="/ws">
+        <div class="schedule-list" id="schedule-list">
+            {% for act in acts %}
+                {% include "components/act_row.html" %}
+            {% endfor %}
+        </div>
+    </main>
+
+    <!-- Confirmation Modal -->
+    <div class="modal-overlay" x-show="showConfirmModal" x-cloak @click.self="confirmNo()" @keydown.escape.window="showConfirmModal && confirmNo()">
+        <div class="modal-box">
+            <p class="modal-message" x-text="confirmMessage"></p>
+            <div class="modal-actions">
+                <button class="btn btn-modal-cancel" @click="confirmNo()">Cancel</button>
+                <button class="btn btn-modal-confirm" @click="confirmYes()">Clear</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function scheduleApp() {
+    return {
+        currentTime: '',
+        slip: {{ slip }},
+        timeOverride: '',
+        frozenTime: null,
+        showConfirmModal: false,
+        confirmMessage: '',
+        confirmUrl: '',
+        nowPlaying: null,
+        upNext: null,
+        countdown: '',
+        isOvertime: false,
+        isLateStart: false,
+
+        init() {
+            this.updateTime();
+            setInterval(() => this.updateTime(), 1000);
+        },
+
+        updateTime() {
+            if (this.frozenTime) {
+                this.currentTime = this.frozenTime;
+            } else {
+                const now = new Date();
+                this.currentTime = now.toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+            }
+            this.checkActAlerts();
+            this.updateNowPlaying();
+        },
+
+        timeToMinutes(timeStr) {
+            const parts = timeStr.split(':');
+            return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+        },
+
+        timeToSeconds(timeStr) {
+            const parts = timeStr.split(':');
+            const hours = parseInt(parts[0]);
+            const mins = parseInt(parts[1]);
+            const secs = parts[2] ? parseInt(parts[2]) : 0;
+            return hours * 3600 + mins * 60 + secs;
+        },
+
+        checkActAlerts() {
+            const currentMinutes = this.timeToMinutes(this.currentTime);
+            const actRows = document.querySelectorAll('.act-row');
+
+            actRows.forEach(row => {
+                const scheduledStart = row.dataset.scheduledStart;
+                const scheduledEnd = row.dataset.scheduledEnd;
+                const hasActualStart = row.dataset.hasActualStart === 'true';
+                const hasActualEnd = row.dataset.hasActualEnd === 'true';
+
+                const startMinutes = this.timeToMinutes(scheduledStart);
+                const endMinutes = this.timeToMinutes(scheduledEnd);
+
+                // Remove existing alert classes
+                row.classList.remove('flash-warning', 'flash-danger', 'act-live', 'act-live-ending');
+
+                // Flash yellow: within 5 min of start, no actual start recorded
+                if (!hasActualStart && currentMinutes >= startMinutes - 5 && currentMinutes < endMinutes) {
+                    row.classList.add('flash-warning');
+                }
+
+                // Green: act in progress and within scheduled time
+                if (hasActualStart && !hasActualEnd && currentMinutes < endMinutes) {
+                    // Flash green if within 5 min of end
+                    if (currentMinutes >= endMinutes - 5) {
+                        row.classList.add('act-live-ending');
+                    } else {
+                        row.classList.add('act-live');
+                    }
+                }
+
+                // Flash red: past end time, started but no actual end recorded
+                if (hasActualStart && !hasActualEnd && currentMinutes >= endMinutes) {
+                    row.classList.add('flash-danger');
+                }
+            });
+        },
+
+        updateNowPlaying() {
+            const currentSeconds = this.timeToSeconds(this.currentTime);
+            const actRows = document.querySelectorAll('.act-row');
+
+            this.nowPlaying = null;
+            this.upNext = null;
+            this.countdown = '';
+            this.isOvertime = false;
+            this.isLateStart = false;
+
+            let shouldBePlayingNow = null;
+            let nextUpcoming = null;
+
+            for (const row of actRows) {
+                const actName = row.querySelector('.act-name').textContent;
+                const scheduledStart = row.dataset.scheduledStart;
+                const scheduledEnd = row.dataset.scheduledEnd;
+                const hasActualStart = row.dataset.hasActualStart === 'true';
+                const hasActualEnd = row.dataset.hasActualEnd === 'true';
+
+                const startSeconds = this.timeToSeconds(scheduledStart);
+                const endSeconds = this.timeToSeconds(scheduledEnd);
+
+                // Check if act is currently playing
+                if (hasActualStart && !hasActualEnd) {
+                    this.nowPlaying = actName;
+                    const remaining = endSeconds - currentSeconds;
+                    this.countdown = this.formatCountdown(remaining);
+                    this.isOvertime = remaining < 0;
+                    return;
+                }
+
+                // Skip completed acts
+                if (hasActualEnd) continue;
+
+                // Check if this act should be playing now (past start time, not started)
+                if (!hasActualStart && currentSeconds >= startSeconds && currentSeconds < endSeconds) {
+                    shouldBePlayingNow = { name: actName, startSeconds, endSeconds };
+                }
+
+                // Find next upcoming act (scheduled start in the future)
+                if (!hasActualStart && currentSeconds < startSeconds && !nextUpcoming) {
+                    nextUpcoming = { name: actName, startSeconds };
+                }
+            }
+
+            // Prioritize act that should be playing now, then next upcoming
+            if (shouldBePlayingNow) {
+                this.upNext = shouldBePlayingNow.name;
+                const lateBy = currentSeconds - shouldBePlayingNow.startSeconds;
+                this.countdown = this.formatCountdown(-lateBy); // Negative to show as +time
+                this.isLateStart = true;
+            } else if (nextUpcoming) {
+                this.upNext = nextUpcoming.name;
+                this.countdown = this.formatCountdown(nextUpcoming.startSeconds - currentSeconds);
+                this.isLateStart = false;
+            }
+        },
+
+        formatCountdown(seconds) {
+            const isOver = seconds < 0;
+            const absSeconds = Math.abs(seconds);
+            const hrs = Math.floor(absSeconds / 3600);
+            const mins = Math.floor((absSeconds % 3600) / 60);
+            const secs = absSeconds % 60;
+
+            let time;
+            if (hrs > 0) {
+                time = `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            } else {
+                time = `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            return isOver ? `+${time}` : time;
+        },
+
+        applyTimeOverride() {
+            if (this.timeOverride) {
+                this.frozenTime = this.timeOverride;
+                this.currentTime = this.frozenTime;
+                this.checkActAlerts();
+            }
+        },
+
+        clearTimeOverride() {
+            this.timeOverride = '';
+            this.frozenTime = null;
+            this.updateTime();
+        },
+
+        formatSlip(seconds) {
+            if (seconds === 0) return 'On Time';
+            const mins = Math.floor(Math.abs(seconds) / 60);
+            const secs = Math.abs(seconds) % 60;
+            const sign = seconds > 0 ? '+' : '-';
+            if (mins > 0) {
+                return `${sign}${mins}m ${secs}s`;
+            }
+            return `${sign}${secs}s`;
+        },
+
+        updateSlip(newSlip) {
+            this.slip = newSlip;
+        },
+
+        showConfirm(message, url) {
+            this.confirmMessage = message;
+            this.confirmUrl = url;
+            this.showConfirmModal = true;
+        },
+
+        confirmNo() {
+            this.showConfirmModal = false;
+            this.confirmUrl = '';
+        },
+
+        confirmYes() {
+            if (this.confirmUrl) {
+                fetch(this.confirmUrl, { method: 'POST' });
+            }
+            this.showConfirmModal = false;
+            this.confirmUrl = '';
+        }
+    }
+}
+</script>
+{% endblock %}

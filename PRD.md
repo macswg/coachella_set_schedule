@@ -71,23 +71,27 @@ This project provides a “schedule board” for a festival day that tracks each
 ### Platform & Stack
 | Component | Decision |
 |-----------|----------|
-| Frontend | Web app (React or Vue) |
-| Backend | Python + FastAPI with WebSocket support |
-| Data source | Google Sheets API (read schedule, write actuals back) |
-| Local storage | Browser localStorage with sync to Sheets |
-| Hosting | TBD (Vercel, Railway, Fly.io, or similar) |
+| Server | Python + FastAPI (single process serves everything) |
+| Templates | Jinja2 (server-rendered HTML) |
+| Interactivity | HTMX (server interactions, WebSocket) + Alpine.js (client-side reactivity) |
+| Data source | Google Sheets API (Service Account auth) |
+| Local storage | Browser localStorage for offline viewing |
+| Hosting | Local machine (LAN access only) |
+
+No Node.js or build step required. Run with single command: `uvicorn main:app`
 
 ### Data Flow
-1. **Schedule import**: Fetch published schedule from Google Sheets API on load/refresh.
-2. **Local state**: Store schedule and actual times in browser localStorage for offline viewing.
-3. **Real-time sync**: WebSocket connection to FastAPI backend syncs actual times between operators.
-4. **Export**: Push recorded actual times back to Google Sheets for persistence.
+1. **Page load**: FastAPI fetches schedule from Google Sheets, renders via Jinja2 template.
+2. **Real-time sync**: HTMX WebSocket (`hx-ws`) connects browser to FastAPI for live updates.
+3. **Record time**: Operator clicks "Now" button → HTMX sends to FastAPI → FastAPI writes to Google Sheets → broadcasts updated HTML to all connected clients.
+4. **Client-side**: Alpine.js handles live clock display and slip calculations without server round-trips.
+5. **Offline**: Browser localStorage caches schedule for read-only viewing if connection lost.
 
 ### Sync & Connectivity
 | Aspect | Decision |
 |--------|----------|
-| Multi-operator sync | Real-time via WebSockets |
-| Offline behavior | Read-only mode (can view schedule, cannot record times until reconnected) |
+| Multi-operator sync | Real-time via HTMX WebSocket (`hx-ws`) |
+| Offline behavior | Read-only mode (can view cached schedule, cannot record times until reconnected) |
 | Timezone | Festival local time only (PDT for Coachella) |
 | Conflict resolution | Last-write-wins with timestamp; operators see updates in real-time |
 
@@ -96,13 +100,14 @@ This project provides a “schedule board” for a festival day that tracks each
 ### Layout & Theme
 | Aspect | Decision |
 |--------|----------|
-| Stage view | Single stage at a time (stage selector to switch) |
+| Stage view | Single stage (no multi-stage support for MVP) |
 | Primary layout | Vertical timeline (acts stacked top-to-bottom, current act highlighted) |
 | Theme | Dark mode by default (optimized for outdoor/bright sunlight use) |
+| Time-of-day (TOD) | **Prominently displayed** and always visible (large header clock) |
+| Highlight color | **Green** for primary text highlights (e.g., current act emphasis) |
 
 ### Per-Act Display
 - **Act name** prominently displayed
-- **Artist photo/artwork** for visual identification
 - Scheduled start/end times
 - Actual start/end times (if recorded)
 - Variance indicators (early/late)
@@ -124,17 +129,23 @@ This project provides a “schedule board” for a festival day that tracks each
 - All operators see the same shared state via WebSocket sync
 - No authentication required (single shared session per stage)
 
-## Open Questions (Resolved)
-
-| Original Question | Resolution |
-|-------------------|------------|
-| Data format for Google Sheet export | Google Sheets API (live sync, not file export) |
+## Resolved Questions
+| Question | Resolution |
+|----------|------------|
+| Google Sheets schema | See schema below |
+| Google Sheets authentication | Service Account |
+| Deployment/hosting | Local machine (LAN access only) |
+| Artist photos | Skip for MVP |
+| Multi-stage support | Single stage only |
 | Timezone handling | Festival local time only (PDT) |
-| Multi-stage/day navigation | Single stage at a time with stage selector |
+| Data sync | Google Sheets API (live sync) |
 
-## Remaining Open Questions
-- Specific Google Sheets structure/schema for schedule data
-- Authentication setup for Google Sheets API (service account vs OAuth)
-- Deployment environment and hosting provider
-- Artist photo/artwork source (Sheets column? External API?)
-
+## Google Sheet Schema
+| Column | Description |
+|--------|-------------|
+| `act_name` | Artist/act name |
+| `scheduled_start` | Published start time (e.g., `14:30`) |
+| `scheduled_end` | Published end time |
+| `actual_start` | Recorded start time (filled by app during live operation) |
+| `actual_end` | Recorded end time (filled by app during live operation) |
+| `notes` | Optional notes field |

@@ -1,0 +1,69 @@
+<div class="act-row {% if act.is_in_progress() %}act-in-progress{% elif act.is_complete() %}act-complete{% else %}act-pending{% endif %}"
+     id="act-{{ act.act_name | replace(' ', '-') }}"
+     data-scheduled-start="{{ act.scheduled_start.strftime('%H:%M') }}"
+     data-scheduled-end="{{ act.scheduled_end.strftime('%H:%M') }}"
+     data-has-actual-start="{{ 'true' if act.actual_start else 'false' }}"
+     data-has-actual-end="{{ 'true' if act.actual_end else 'false' }}">
+    <div class="act-status-indicator">
+        {% if act.is_in_progress() %}
+            <span class="status-dot status-live"></span>
+        {% elif act.is_complete() %}
+            <span class="status-dot status-done"></span>
+        {% else %}
+            <span class="status-dot status-pending"></span>
+        {% endif %}
+    </div>
+
+    <div class="act-info">
+        <div class="act-name">{{ act.act_name }}</div>
+        <div class="act-times">
+            <span class="scheduled-times">
+                {{ act.scheduled_start.strftime('%H:%M') }} - {{ act.scheduled_end.strftime('%H:%M') }}
+            </span>
+            {% if act.actual_start or act.actual_end %}
+                <span class="actual-times">
+                    (Actual:
+                    {{ act.actual_start.strftime('%H:%M') if act.actual_start else '—' }}
+                    -
+                    {{ act.actual_end.strftime('%H:%M') if act.actual_end else '—' }})
+                </span>
+            {% endif %}
+        </div>
+        {% if act.start_variance is not none or act.end_variance is not none %}
+            <div class="act-variance">
+                {% if act.start_variance is not none %}
+                    <span class="variance {% if act.start_variance > 0 %}variance-late{% elif act.start_variance < 0 %}variance-early{% endif %}">
+                        Start: {{ format_variance(act.start_variance) }}
+                    </span>
+                {% endif %}
+                {% if act.end_variance is not none %}
+                    <span class="variance {% if act.end_variance > 0 %}variance-late{% elif act.end_variance < 0 %}variance-early{% endif %}">
+                        End: {{ format_variance(act.end_variance) }}
+                    </span>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="act-actions">
+        {% if not act.actual_start %}
+            <button class="btn btn-start"
+                    hx-post="/acts/{{ act.act_name | urlencode }}/start"
+                    hx-swap="none">
+                Record Start
+            </button>
+        {% elif not act.actual_end %}
+            <button class="btn btn-end"
+                    hx-post="/acts/{{ act.act_name | urlencode }}/end"
+                    hx-swap="none">
+                Record End
+            </button>
+        {% endif %}
+        {% if act.actual_start or act.actual_end %}
+            <button class="btn btn-clear"
+                    @click="$dispatch('show-confirm', {message: 'Clear recorded times for {{ act.act_name }}?', url: '/acts/{{ act.act_name | urlencode }}/clear'})">
+                Clear
+            </button>
+        {% endif %}
+    </div>
+</div>

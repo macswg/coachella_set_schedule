@@ -1,0 +1,652 @@
+/* Festival Schedule Board - Dark Theme */
+
+:root {
+    --bg-primary: #0f0f0f;
+    --bg-secondary: #1a1a1a;
+    --bg-tertiary: #252525;
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0a0;
+    --text-muted: #666666;
+    --accent-primary: #ff6b35;
+    --accent-secondary: #4ecdc4;
+    --status-live: #ff4444;
+    --status-done: #44ff44;
+    --status-pending: #666666;
+    --variance-late: #ff6b6b;
+    --variance-early: #6bff6b;
+    --border-color: #333333;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* Prevent text selection on buttons for mobile */
+button {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+}
+
+/* Minimum touch target size */
+.btn {
+    min-height: 44px;
+    min-width: 44px;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background-color: var(--bg-secondary);
+    border-radius: 12px;
+    margin-bottom: 24px;
+    border: 1px solid var(--border-color);
+}
+
+.header h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+.current-time {
+    font-size: 2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+}
+
+.slip-display {
+    text-align: right;
+}
+
+.slip-label {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    display: block;
+}
+
+.slip-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--accent-secondary);
+}
+
+.slip-warning .slip-value {
+    color: var(--variance-late);
+}
+
+/* Now Playing / Up Next Section */
+.now-playing-section {
+    background-color: var(--bg-secondary);
+    border-radius: 12px;
+    margin-bottom: 24px;
+    border: 1px solid var(--border-color);
+    padding: 20px;
+    text-align: center;
+}
+
+.now-playing,
+.up-next {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.now-playing {
+    background: linear-gradient(135deg, rgba(68, 255, 68, 0.1) 0%, rgba(68, 255, 68, 0.05) 100%);
+    margin: -20px;
+    padding: 20px;
+    border-radius: 12px;
+}
+
+.up-next {
+    background: linear-gradient(135deg, rgba(78, 205, 196, 0.1) 0%, rgba(78, 205, 196, 0.05) 100%);
+    margin: -20px;
+    padding: 20px;
+    border-radius: 12px;
+}
+
+.np-label {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+}
+
+.now-playing .np-label {
+    color: var(--status-done);
+}
+
+.up-next .np-label {
+    color: var(--accent-secondary);
+}
+
+.np-artist {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.np-countdown-wrap {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.np-countdown {
+    font-size: 2.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+}
+
+.np-suffix {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+/* Overtime state */
+.now-playing.is-overtime {
+    background: linear-gradient(135deg, rgba(255, 68, 68, 0.15) 0%, rgba(255, 68, 68, 0.08) 100%);
+}
+
+.np-countdown.overtime {
+    color: var(--variance-late);
+}
+
+/* Late start state */
+.up-next.is-late-start {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.2) 0%, rgba(255, 193, 7, 0.1) 100%);
+}
+
+.up-next.is-late-start .np-label {
+    color: #ffc107;
+}
+
+.np-countdown.late-start {
+    color: #ffc107;
+}
+
+/* Schedule List */
+.schedule {
+    background-color: var(--bg-secondary);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+
+.schedule-list {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Act Row */
+.act-row {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s ease;
+}
+
+.act-row:last-child {
+    border-bottom: none;
+}
+
+.act-row:hover {
+    background-color: var(--bg-tertiary);
+}
+
+.act-in-progress {
+    background-color: rgba(255, 68, 68, 0.1);
+}
+
+.act-in-progress:hover {
+    background-color: rgba(255, 68, 68, 0.15);
+}
+
+.act-complete {
+    opacity: 0.7;
+}
+
+/* Status Indicator */
+.act-status-indicator {
+    margin-right: 16px;
+}
+
+.status-dot {
+    display: block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.status-live {
+    background-color: var(--status-live);
+    box-shadow: 0 0 8px var(--status-live);
+    animation: pulse 2s infinite;
+}
+
+.status-done {
+    background-color: var(--status-done);
+}
+
+.status-pending {
+    background-color: var(--status-pending);
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Act Info */
+.act-info {
+    flex: 1;
+}
+
+.act-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.act-times {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.scheduled-times {
+    font-variant-numeric: tabular-nums;
+}
+
+.actual-times {
+    color: var(--text-muted);
+    margin-left: 8px;
+}
+
+.act-variance {
+    margin-top: 4px;
+    font-size: 0.75rem;
+}
+
+.variance {
+    margin-right: 12px;
+}
+
+.variance-late {
+    color: var(--variance-late);
+}
+
+.variance-early {
+    color: var(--variance-early);
+}
+
+/* Buttons */
+.act-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-start {
+    background-color: var(--accent-primary);
+    color: white;
+}
+
+.btn-start:hover {
+    background-color: #ff8255;
+}
+
+.btn-end {
+    background-color: var(--status-live);
+    color: white;
+}
+
+.btn-end:hover {
+    background-color: #ff6666;
+}
+
+.btn-clear {
+    background-color: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.btn-clear:hover {
+    background-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+/* HTMX Loading States */
+.htmx-request {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.htmx-request .btn {
+    cursor: wait;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .container {
+        padding: 12px;
+    }
+
+    .header {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+        padding: 16px;
+    }
+
+    .header h1 {
+        font-size: 1.25rem;
+    }
+
+    .header-right {
+        text-align: center;
+    }
+
+    .slip-label {
+        display: inline;
+    }
+
+    .current-time {
+        font-size: 1.5rem;
+    }
+
+    /* Now Playing Section - Mobile */
+    .now-playing-section {
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+
+    .now-playing,
+    .up-next {
+        margin: -16px;
+        padding: 16px;
+    }
+
+    .np-artist {
+        font-size: 1.35rem;
+    }
+
+    .np-countdown {
+        font-size: 2rem;
+    }
+
+    .np-countdown-wrap {
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* Schedule List - Mobile */
+    .schedule {
+        border-radius: 8px;
+    }
+
+    .act-row {
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 14px 16px;
+    }
+
+    .act-status-indicator {
+        margin-right: 12px;
+    }
+
+    .act-info {
+        flex: 1 1 calc(100% - 40px);
+    }
+
+    .act-name {
+        font-size: 1rem;
+    }
+
+    .act-times {
+        font-size: 0.8rem;
+    }
+
+    .actual-times {
+        display: block;
+        margin-left: 0;
+        margin-top: 2px;
+    }
+
+    .act-actions {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .act-actions .btn {
+        flex: 1;
+        padding: 12px 16px;
+        font-size: 1rem;
+    }
+
+    /* Time Override - Mobile */
+    .time-override {
+        justify-content: center;
+    }
+
+    .time-override input[type="time"] {
+        padding: 8px 12px;
+        font-size: 1rem;
+    }
+
+    .btn-clear-time {
+        padding: 8px 12px;
+        font-size: 0.875rem;
+    }
+}
+
+/* Extra small devices */
+@media (max-width: 380px) {
+    .container {
+        padding: 8px;
+    }
+
+    .header {
+        padding: 12px;
+    }
+
+    .np-artist {
+        font-size: 1.2rem;
+    }
+
+    .np-countdown {
+        font-size: 1.75rem;
+    }
+
+    .act-row {
+        padding: 12px;
+    }
+
+    .act-name {
+        font-size: 0.95rem;
+    }
+}
+
+/* TEST ONLY: Time Override */
+.time-override {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.time-override input[type="time"] {
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--accent-secondary);
+    border-radius: 4px;
+    color: var(--text-primary);
+    padding: 4px 8px;
+    font-size: 0.875rem;
+    font-family: inherit;
+}
+
+.time-override input[type="time"]:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.btn-clear-time {
+    background-color: var(--accent-secondary);
+    color: var(--bg-primary);
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-clear-time:hover {
+    opacity: 0.8;
+}
+
+/* Act Alert States */
+.act-live {
+    background-color: rgba(68, 255, 68, 0.15);
+}
+
+.act-live:hover {
+    background-color: rgba(68, 255, 68, 0.2);
+}
+
+.act-live-ending {
+    animation: flash-green 5s ease-in-out infinite;
+}
+
+@keyframes flash-green {
+    0%, 60%, 100% {
+        background-color: rgba(68, 255, 68, 0.15);
+    }
+    80% {
+        background-color: rgba(68, 255, 68, 0.35);
+    }
+}
+
+.flash-warning {
+    animation: flash-yellow 3.5s ease-in-out infinite;
+}
+
+.flash-danger {
+    animation: flash-red 3s ease-in-out infinite;
+}
+
+@keyframes flash-yellow {
+    0%, 100% {
+        background-color: var(--bg-secondary);
+    }
+    50% {
+        background-color: rgba(255, 193, 7, 0.25);
+    }
+}
+
+@keyframes flash-red {
+    0%, 100% {
+        background-color: var(--bg-secondary);
+    }
+    50% {
+        background-color: rgba(255, 68, 68, 0.3);
+    }
+}
+
+/* Confirmation Modal */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.modal-box {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.modal-message {
+    font-size: 1.125rem;
+    color: var(--text-primary);
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.btn-modal-cancel {
+    background-color: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    min-width: 100px;
+}
+
+.btn-modal-cancel:hover {
+    background-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.btn-modal-confirm {
+    background-color: var(--status-live);
+    color: white;
+    min-width: 100px;
+}
+
+.btn-modal-confirm:hover {
+    background-color: #ff6666;
+}
+
+/* Alpine.js x-cloak (hide elements until Alpine initializes) */
+[x-cloak] {
+    display: none !important;
+}
