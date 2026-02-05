@@ -44,3 +44,5 @@ pkill -f "uvicorn main:app"
 - View-only mode for spectators, edit mode for operators
 - Hide/show completed acts toggle
 - Mobile-friendly dark theme UI
+- Google Sheets integration with automatic polling (every 30 seconds)
+- Displays active worksheet name in the UI

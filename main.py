@@ -15,6 +15,7 @@ if settings.USE_GOOGLE_SHEETS:
     from app import sheets as store
 else:
     from app import store
+from app.models import Act
 from app.slip import calculate_slip, format_variance
 from app.websocket import manager
 
@@ -90,6 +91,7 @@ def get_template_context(request: Request = None) -> dict:
         "acts": acts,
         "slip": slip,
         "format_variance": format_variance,
+        "sheet_tab": settings.GOOGLE_SHEET_TAB if settings.USE_GOOGLE_SHEETS else None,
     }
 
 
@@ -155,7 +157,7 @@ async def get_brightness():
     return {"value": manager.current_brightness}
 
 
-def build_schedule_html(acts, view_only: bool) -> str:
+def build_schedule_html(acts: list[Act], view_only: bool) -> str:
     """Build HTML for all act rows."""
     html_parts = []
     for act in acts:

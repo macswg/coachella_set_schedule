@@ -29,17 +29,21 @@ No build step required - HTMX and Alpine.js loaded via CDN script tags.
 3. "Record Now" button sends time via HTMX, FastAPI broadcasts to all clients
 4. Alpine.js handles live clock and computed slip values client-side
 5. Actual times written to Google Sheets for persistence
+6. Background task polls Google Sheets every 30 seconds and broadcasts updates to all clients
 
 ### Google Sheet Schema
 
-| Column | Description |
-|--------|-------------|
-| `act_name` | Artist/act name |
-| `scheduled_start` | Published start time (e.g., `14:30`) |
-| `scheduled_end` | Published end time |
-| `actual_start` | Recorded start time (filled by app) |
-| `actual_end` | Recorded end time (filled by app) |
-| `notes` | Optional notes field |
+The app reads data by column position (not header names) to handle sheets with non-standard headers:
+
+| Column | Position | Description |
+|--------|----------|-------------|
+| Artist name | B (col 2) | Artist/act name |
+| Scheduled start | D (col 4) | Published start time (e.g., `14:30`) |
+| Scheduled end | E (col 5) | Published end time |
+| Actual time on | F (col 6) | Recorded start time (filled by app) |
+| Actual time off | G (col 7) | Recorded end time (filled by app) |
+
+Header row is expected at row 5, data starts at row 6. Rows without valid scheduled start/end times are skipped.
 
 ## MVP Scope
 
@@ -65,7 +69,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 ```
 coachella_set_schedule/
-├── main.py              # FastAPI app entry point
+├── main.py              # FastAPI app entry point, background polling
 ├── requirements.txt     # Python dependencies
 ├── .env.example         # Environment variables template
 ├── app/
@@ -73,8 +77,9 @@ coachella_set_schedule/
 │   ├── models.py        # Pydantic models (Act, Schedule)
 │   ├── slip.py          # Slip calculation logic
 │   ├── store.py         # In-memory mock data (development)
-│   ├── sheets.py        # Google Sheets integration (production)
-│   └── websocket.py     # WebSocket connection manager
+│   ├── sheets.py        # Google Sheets integration (column-based parsing)
+│   ├── websocket.py     # WebSocket connection manager
+│   └── artnet.py        # Art-Net brightness listener (optional)
 ├── templates/
 │   ├── base.html        # Base template with HTMX/Alpine.js
 │   ├── index.html       # Main schedule view
@@ -88,7 +93,10 @@ coachella_set_schedule/
 
 To use Google Sheets instead of mock data:
 1. Copy `.env.example` to `.env` and fill in your values
-2. In `main.py`, change `from app import store` to `from app import sheets as store`
+2. Set `USE_GOOGLE_SHEETS=true` in `.env`
+3. Configure `GOOGLE_SHEETS_ID`, `GOOGLE_SHEET_TAB`, and `GOOGLE_SERVICE_ACCOUNT_FILE`
+
+The app polls Google Sheets every 30 seconds (configurable via `POLL_INTERVAL_SECONDS` in `main.py`) and broadcasts updates to all connected clients.
 
 ## Key Business Rules
 

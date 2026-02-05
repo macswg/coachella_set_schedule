@@ -51,13 +51,13 @@
             <button class="btn btn-start"
                     hx-post="/acts/{{ act.act_name | urlencode }}/start"
                     hx-swap="none">
-                Record Start
+                Mark Set Start
             </button>
         {% elif not act.actual_end %}
             <button class="btn btn-end"
                     hx-post="/acts/{{ act.act_name | urlencode }}/end"
                     hx-swap="none">
-                Record End
+                Mark Set Complete
             </button>
         {% endif %}
         {% if act.actual_start or act.actual_end %}

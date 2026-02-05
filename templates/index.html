@@ -12,7 +12,6 @@
         <div class="header-center">
             <div class="current-time" x-text="currentTime"></div>
             {% if not view_only %}
-            <!-- TEST ONLY: Time override -->
             <div class="time-override">
                 <input type="time"
                        x-model="timeOverride"
@@ -35,33 +34,15 @@
         </div>
     </header>
 
-    <!-- Now Playing / Up Next Section -->
-    <section class="now-playing-section">
-        <template x-if="nowPlaying">
-            <div class="now-playing" :class="{ 'is-overtime': isOvertime }">
-                <span class="np-label">Now Playing</span>
-                <span class="np-artist" x-text="nowPlaying"></span>
-                <div class="np-countdown-wrap">
-                    <span class="np-countdown" :class="{ 'overtime': isOvertime }" x-text="countdown"></span>
-                    <span class="np-suffix" x-text="isOvertime ? 'over' : 'remaining'"></span>
-                </div>
-            </div>
-        </template>
-        <template x-if="!nowPlaying && upNext">
-            <div class="up-next" :class="{ 'is-late-start': isLateStart }">
-                <span class="np-label" x-text="isLateStart ? 'Should Be On' : 'Up Next'"></span>
-                <span class="np-artist" x-text="upNext"></span>
-                <div class="np-countdown-wrap">
-                    <span class="np-countdown" :class="{ 'late-start': isLateStart }" x-text="countdown"></span>
-                    <span class="np-suffix" x-text="isLateStart ? 'late' : 'until start'"></span>
-                </div>
-            </div>
-        </template>
-    </section>
+    <!-- Now Playing / Up Next Section (hidden on Chrome iOS due to scroll bug) -->
+    <section class="now-playing-section" id="now-playing-section"></section>
 
     <!-- Schedule List -->
     <main class="schedule" hx-ext="ws" ws-connect="/ws?mode={% if view_only %}view{% else %}edit{% endif %}">
         <div class="schedule-header">
+            {% if sheet_tab %}
+            <span class="sheet-tab-label">Sheet: {{ sheet_tab }}</span>
+            {% endif %}
             <button class="btn-toggle-completed" @click="hideCompleted = !hideCompleted">
                 <span x-text="hideCompleted ? 'Show Completed' : 'Hide Completed'"></span>
             </button>
@@ -95,11 +76,6 @@ function scheduleApp() {
         frozenTime: null,
         confirmMessage: '',
         confirmUrl: '',
-        nowPlaying: null,
-        upNext: null,
-        countdown: '',
-        isOvertime: false,
-        isLateStart: false,
         hideCompleted: true,
 
         init() {
@@ -107,6 +83,11 @@ function scheduleApp() {
             setInterval(() => this.updateTime(), 1000);
             this.fetchBrightness();
             this.setupBrightnessListener();
+            // Make now-playing section sticky on Chrome iOS to avoid scroll bug
+            if (/CriOS/.test(navigator.userAgent)) {
+                const section = document.getElementById('now-playing-section');
+                if (section) section.classList.add('np-sticky');
+            }
         },
 
         async fetchBrightness() {
@@ -120,20 +101,16 @@ function scheduleApp() {
         },
 
         setupBrightnessListener() {
-            // Listen for HTMX WebSocket messages before they're processed
             const self = this;
             document.body.addEventListener('htmx:wsBeforeMessage', function(event) {
-                const message = event.detail.message;
-                console.log('[WS] Received:', message);
                 try {
-                    const data = JSON.parse(message);
+                    const data = JSON.parse(event.detail.message);
                     if (data.type === 'brightness') {
-                        console.log('[WS] Brightness update:', data.value);
                         self.brightness = data.value;
-                        event.preventDefault(); // Don't let HTMX process this as HTML
+                        event.preventDefault();
                     }
                 } catch (e) {
-                    // Not JSON, let HTMX handle it
+                    // Not JSON, let HTMX handle it as HTML
                 }
             });
         },
@@ -218,14 +195,17 @@ function scheduleApp() {
         },
 
         updateNowPlaying() {
+            const section = document.getElementById('now-playing-section');
+            if (!section) return;
+
             const currentSeconds = this.timeToSeconds(this.currentTime);
             const actRows = document.querySelectorAll('.act-row');
 
-            this.nowPlaying = null;
-            this.upNext = null;
-            this.countdown = '';
-            this.isOvertime = false;
-            this.isLateStart = false;
+            let nowPlaying = null;
+            let upNext = null;
+            let countdown = '';
+            let isOvertime = false;
+            let isLateStart = false;
 
             let shouldBePlayingNow = null;
             let nextUpcoming = null;
@@ -240,39 +220,59 @@ function scheduleApp() {
                 const startSeconds = this.timeToSeconds(scheduledStart);
                 const endSeconds = this.timeToSeconds(scheduledEnd);
 
-                // Check if act is currently playing
                 if (hasActualStart && !hasActualEnd) {
-                    this.nowPlaying = actName;
+                    nowPlaying = actName;
                     const remaining = endSeconds - currentSeconds;
-                    this.countdown = this.formatCountdown(remaining);
-                    this.isOvertime = remaining < 0;
-                    return;
+                    countdown = this.formatCountdown(remaining);
+                    isOvertime = remaining < 0;
+                    break;
                 }
 
-                // Skip completed acts
                 if (hasActualEnd) continue;
 
-                // Check if this act should be playing now (past start time, not started)
                 if (!hasActualStart && currentSeconds >= startSeconds && currentSeconds < endSeconds) {
                     shouldBePlayingNow = { name: actName, startSeconds, endSeconds };
                 }
 
-                // Find next upcoming act (scheduled start in the future)
                 if (!hasActualStart && currentSeconds < startSeconds && !nextUpcoming) {
                     nextUpcoming = { name: actName, startSeconds };
                 }
             }
 
-            // Prioritize act that should be playing now, then next upcoming
-            if (shouldBePlayingNow) {
-                this.upNext = shouldBePlayingNow.name;
+            if (!nowPlaying && shouldBePlayingNow) {
+                upNext = shouldBePlayingNow.name;
                 const lateBy = currentSeconds - shouldBePlayingNow.startSeconds;
-                this.countdown = this.formatCountdown(-lateBy); // Negative to show as +time
-                this.isLateStart = true;
-            } else if (nextUpcoming) {
-                this.upNext = nextUpcoming.name;
-                this.countdown = this.formatCountdown(nextUpcoming.startSeconds - currentSeconds);
-                this.isLateStart = false;
+                countdown = this.formatCountdown(-lateBy);
+                isLateStart = true;
+            } else if (!nowPlaying && nextUpcoming) {
+                upNext = nextUpcoming.name;
+                countdown = this.formatCountdown(nextUpcoming.startSeconds - currentSeconds);
+                isLateStart = false;
+            }
+
+            // Update DOM
+            if (nowPlaying) {
+                section.innerHTML = `
+                    <div class="now-playing ${isOvertime ? 'is-overtime' : ''}">
+                        <span class="np-label">Now Playing</span>
+                        <span class="np-artist">${nowPlaying}</span>
+                        <div class="np-countdown-wrap">
+                            <span class="np-countdown ${isOvertime ? 'overtime' : ''}">${countdown}</span>
+                            <span class="np-suffix">${isOvertime ? 'over' : 'remaining'}</span>
+                        </div>
+                    </div>`;
+            } else if (upNext) {
+                section.innerHTML = `
+                    <div class="up-next ${isLateStart ? 'is-late-start' : ''}">
+                        <span class="np-label">${isLateStart ? 'Should Be On' : 'Up Next'}</span>
+                        <span class="np-artist">${upNext}</span>
+                        <div class="np-countdown-wrap">
+                            <span class="np-countdown ${isLateStart ? 'late-start' : ''}">${countdown}</span>
+                            <span class="np-suffix">${isLateStart ? 'late' : 'until start'}</span>
+                        </div>
+                    </div>`;
+            } else {
+                section.innerHTML = '';
             }
         },
 

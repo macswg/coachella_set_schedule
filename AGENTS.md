@@ -14,9 +14,21 @@ Planned code layout (once scaffolding lands):
 
 ## Build, Test, and Development Commands
 
-This repo is currently documentation-first and does not yet include runnable app code. When you introduce scaffolding, also add the canonical commands to `README.md` and keep them consistent across environments (local + CI), e.g.:
-- `frontend/`: `npm run dev`, `npm test`, `npm run lint`
-- `backend/`: `python -m pytest`, `python -m ruff check`, `python -m uvicorn ...`
+```bash
+# Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate  # or venv\Scripts\activate on Windows
+
+# Install dependencies
+venv/bin/pip install -r requirements.txt
+
+# Run development server (auto-reload enabled)
+venv/bin/uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+# Access the app
+# View-only: http://localhost:8000
+# Operator:  http://localhost:8000/edit
+```
 
 ## Coding Style & Naming Conventions
 

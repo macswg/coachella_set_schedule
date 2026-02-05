@@ -121,6 +121,17 @@ body {
     text-align: center;
 }
 
+.now-playing-section:empty {
+    display: none;
+}
+
+/* Sticky mode for Chrome iOS to prevent scroll jumping */
+.now-playing-section.np-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
 .now-playing,
 .up-next {
     display: flex;
@@ -214,9 +225,21 @@ body {
 
 .schedule-header {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    align-items: center;
     padding: 12px 16px;
     border-bottom: 1px solid var(--border-color);
+}
+
+.sheet-tab-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background-color: var(--bg-tertiary);
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
 }
 
 .btn-toggle-completed {
@@ -486,6 +509,12 @@ body {
         font-size: 0.875rem;
     }
 
+    .sheet-tab-label {
+        min-height: 44px;
+        padding: 10px 16px;
+        font-size: 0.875rem;
+    }
+
     .act-row {
         flex-wrap: wrap;
         gap: 12px;
@@ -560,6 +589,11 @@ body {
         font-size: 0.8rem;
     }
 
+    .sheet-tab-label {
+        padding: 10px 12px;
+        font-size: 0.8rem;
+    }
+
     .np-artist {
         font-size: 1.2rem;
     }
@@ -577,7 +611,7 @@ body {
     }
 }
 
-/* TEST ONLY: Time Override */
+/* Time Override (operator feature) */
 .time-override {
     display: flex;
     align-items: center;
@@ -724,3 +758,4 @@ body {
 [x-cloak] {
     display: none !important;
 }
+
