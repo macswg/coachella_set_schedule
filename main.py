@@ -141,7 +141,7 @@ async def record_end(act_name: str):
 async def clear_times(act_name: str):
     """Clear actual times for an act."""
     act_name = unquote(act_name)
-    act = store.clear_actual_times(act_name)
+    act = store.clear_actual_times(act.act_name)
 
     if act:
         await broadcast_schedule_update()
@@ -192,6 +192,19 @@ async def websocket_endpoint(websocket: WebSocket, mode: str = "view"):
             await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+
+
+
+# Reset endpoint for testing
+
+@app.post("/api/reset")
+async def reset_data():
+    """Reset all actual times to None (testing only)"""
+    acts = store.get_schedule()
+    for act in acts:
+        store.clear_actual_times(act.act_name)
+    await broadcast_schedule_update()
+    return {"status": "reset", "acts_cleared": len(acts)}
 
 
 if __name__ == "__main__":
