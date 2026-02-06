@@ -767,3 +767,20 @@ body {
     display: none !important;
 }
 
+
+
+/* Reset All Button */
+.btn-reset-all {
+    background: #dc3545;
+    color: white;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    margin-right: 1rem;
+}
+
+.btn-reset-all:hover {
+    background: #c82333;
+}
