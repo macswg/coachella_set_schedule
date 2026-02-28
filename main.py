@@ -116,6 +116,13 @@ async def record_start(act_name: str):
     """Record the actual start time for an act."""
     act_name = unquote(act_name)
     current_time = datetime.now().time()
+
+    # Auto-complete any currently in-progress act
+    for act in store.get_schedule():
+        if act.is_in_progress():
+            store.update_actual_end(act.act_name, current_time)
+            break
+
     act = store.update_actual_start(act_name, current_time)
 
     if act:
