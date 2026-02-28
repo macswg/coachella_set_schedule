@@ -43,7 +43,12 @@
             {% if sheet_tab %}
             <span class="sheet-tab-label">Sheet: {{ sheet_tab }}</span>
             {% endif %}
-            <button class="btn-toggle-completed" @click="hideCompleted = !hideCompleted">
+	    {% if not view_only %}
+            <button class="btn-reset-all" @click="confirmMessage = 'Reset all actual times? This will clear all recorded start and end times.'; confirmUrl = '/api/reset'">
+                Reset All Times
+            </button>
+            {% endif %}
+	    <button class="btn-toggle-completed" @click="hideCompleted = !hideCompleted">
                 <span x-text="hideCompleted ? 'Show Completed' : 'Hide Completed'"></span>
             </button>
         </div>
