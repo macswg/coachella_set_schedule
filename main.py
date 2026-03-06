@@ -5,7 +5,7 @@ from typing import Optional
 from urllib.parse import unquote
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -79,6 +79,12 @@ app = FastAPI(title="Festival Schedule Board", lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Serve favicon from project root."""
+    return FileResponse("favicon.ico")
 
 
 def get_template_context(request: Request = None) -> dict:
