@@ -1,6 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 from urllib.parse import unquote
 
@@ -154,6 +154,28 @@ async def clear_times(act_name: str):
         await broadcast_schedule_update()
 
     return {"status": "ok"}
+
+
+@app.get("/api/next-act")
+async def get_next_act():
+    """Get the next act that hasn't started yet, with seconds until projected start."""
+    acts = store.get_schedule()
+    slip = calculate_slip(acts)
+    now = datetime.now()
+
+    for act in acts:
+        if act.actual_start is None:
+            projected_start = datetime.combine(now.date(), act.scheduled_start) + timedelta(seconds=slip)
+            seconds_until = int((projected_start - now).total_seconds())
+            return {
+                "act_name": act.act_name,
+                "scheduled_start": act.scheduled_start.strftime("%H:%M"),
+                "projected_start": projected_start.strftime("%H:%M"),
+                "slip_seconds": slip,
+                "seconds_until": seconds_until,
+            }
+
+    return {"act_name": None, "seconds_until": None}
 
 
 @app.get("/api/brightness")

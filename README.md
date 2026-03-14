@@ -31,6 +31,27 @@ Real-time schedule tracking for festival stages. Operators record actual start/e
 
 ## Setup
 
+### Docker Compose (recommended)
+
+```bash
+# Copy environment config and edit with your settings
+cp .env.example .env
+
+# Build and start
+docker compose up --build
+```
+
+To use Google Sheets, also mount your service account key:
+
+```yaml
+# in docker-compose.yml, under volumes:
+- ./service-account.json:/app/service-account.json
+```
+
+Then set `GOOGLE_SERVICE_ACCOUNT_FILE=/app/service-account.json` in `.env`.
+
+### Manual Setup
+
 ```bash
 # Create virtual environment
 python3 -m venv venv
@@ -46,15 +67,14 @@ cp .env.example .env
 ## Running the Server
 
 ```bash
+# Docker Compose (recommended)
+docker compose up --build
+
 # Development (with auto-reload)
 venv/bin/uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 # Production
 venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
-
-# Docker
-docker build -t festival-schedule .
-docker run -p 8000:8000 festival-schedule
 ```
 
 Access the app:
@@ -137,6 +157,7 @@ coachella_set_schedule/
 ├── main.py              # FastAPI app, routes, WebSocket, background polling
 ├── requirements.txt     # Python dependencies
 ├── Dockerfile           # Docker configuration
+├── docker-compose.yml   # Docker Compose configuration
 ├── .env.example         # Environment variables template
 ├── app/
 │   ├── config.py        # Settings from environment
