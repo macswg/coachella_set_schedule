@@ -13,6 +13,14 @@ This project provides a “schedule board” for a festival day that tracks each
 - Auto-pulling the next act earlier due to early finishes.
 - Automatically editing the published schedule (schedule edits happen upstream).
 
+
+
+## TODO
+
+- [ ] Add load-in and stage times to the setlist tracker.
+
+
+
 ## Scheduling Policy (Source of Truth)
 - The fixed schedule is authoritative: `scheduled_start` / `scheduled_end` do not change (updated via the Google Sheet).
 - Early finishes do **not** pull the next act earlier; they extend interstitial/break time.
