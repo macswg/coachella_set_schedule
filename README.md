@@ -14,7 +14,7 @@ Real-time schedule tracking for festival stages. Operators record actual start/e
 - **Visual alerts** — flash warnings before act starts, danger styling when running overtime
 - **Art-Net DMX integration** (optional) — reads 16-bit brightness from DMX and displays in UI
 - **Hide/show completed acts** toggle
-- **Time override** for testing — freeze the clock at a specific time in operator mode
+- **Time override** for testing — freeze the clock at a specific time via `/preview`
 - **Mobile-friendly dark theme** optimized for outdoor use
 - **Docker support**
 
@@ -135,7 +135,7 @@ All settings via environment variables (`.env` file). See `.env.example` for the
 | E | Scheduled end |
 | F | Actual time on (written by app) |
 | G | Actual time off (written by app) |
-| H | Screentime total seconds (written by app, On Deck rows only) |
+| H | Screentime total (written by app as `H:MM:SS`, On Deck rows only) |
 
 Time values support `HH:MM`, `HH:MM:SS`, `H:MM AM/PM`, and `H:MM:SS AM/PM` formats.
 
@@ -203,6 +203,6 @@ coachella_set_schedule/
 
 **Mock data mode:** Set `USE_GOOGLE_SHEETS=false` to use in-memory sample data (8 acts, no external dependencies).
 
-**Time override:** In operator mode, use the time input in the header to freeze the clock at a specific time. Click "Live" to resume real-time.
+**Time override:** On `/preview`, use the time input in the header to freeze the clock at a specific time and inspect how the schedule looks at any point in the day. Click "Live" to resume real-time.
 
 **Reset endpoint:** `POST /api/reset` clears all actual times and broadcasts the update — useful for demo resets between tests.

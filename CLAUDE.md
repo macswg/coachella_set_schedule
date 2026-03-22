@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Festival Schedule Board - a real-time schedule tracking application for festival stages. Operators can view scheduled act times and record actual start/end times. The system tracks "slip" (accumulated lateness) and projects impacts on downstream acts.
 
 Key domain concepts:
-- **Slip**: Non-negative value representing how late the live timeline is vs published schedule
+- **Slip**: Signed value (positive = late, negative = early) representing how far the live timeline is vs published schedule
 - **Projections**: Always slip-aware, never pull times earlier than scheduled
 - **Breaks**: Time between acts; early finishes extend breaks, late finishes compress them
 
@@ -42,6 +42,7 @@ The app reads data by column position (not header names) to handle sheets with n
 | Scheduled end | E (col 5) | Published end time |
 | Actual time on | F (col 6) | Recorded start time (filled by app) |
 | Actual time off | G (col 7) | Recorded end time (filled by app) |
+| Screentime total | H (col 8) | On Deck screentime written as `H:MM:SS` (filled by app) |
 
 Header row is expected at row 5, data starts at row 6. Rows without valid scheduled start/end times are skipped. **On Deck rows must have a `scheduled_end`** — this is used to auto-hide the row once local time passes that value. Time values are parsed flexibly and support `HH:MM`, `HH:MM:SS`, `H:MM AM/PM`, and `H:MM:SS AM/PM` formats.
 

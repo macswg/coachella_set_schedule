@@ -376,9 +376,15 @@ function scheduleApp() {
         formatSlip(seconds) {
             if (seconds === 0) return 'On Time';
             const abs = Math.abs(seconds);
+            const suffix = seconds > 0 ? ' late' : ' early';
+            if (abs >= 3600) {
+                const hrs = Math.floor(abs / 3600);
+                const mins = Math.floor((abs % 3600) / 60);
+                const secs = abs % 60;
+                return `${hrs}h ${mins}m ${secs}s${suffix}`;
+            }
             const mins = Math.floor(abs / 60);
             const secs = abs % 60;
-            const suffix = seconds > 0 ? ' late' : ' early';
             if (mins > 0) {
                 return `${mins}m ${secs}s${suffix}`;
             }
