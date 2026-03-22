@@ -17,7 +17,8 @@ This project provides a “schedule board” for a festival day that tracks each
 
 ## TODO
 
-- [ ] Add load-in and stage times to the setlist tracker.
+- [x] Add load-in and stage times to the setlist tracker.
+- [ ] Add date aware so it can deal with times after midnight. 
 
 
 
