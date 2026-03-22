@@ -81,13 +81,13 @@
                 <button class="btn btn-screentime-start"
                         hx-post="/acts/{{ act.act_name | urlencode }}/screentime/start"
                         hx-swap="none">
-                    Screen On
+                    Screentime On
                 </button>
             {% else %}
                 <button class="btn btn-screentime-stop"
                         hx-post="/acts/{{ act.act_name | urlencode }}/screentime/stop"
                         hx-swap="none">
-                    Screen Off
+                    Screentime Off
                 </button>
             {% endif %}
         {% else %}

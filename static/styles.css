@@ -267,6 +267,10 @@ body {
     display: none;
 }
 
+.act-ondeck-past {
+    display: none;
+}
+
 /* Act Row */
 .act-row {
     display: flex;

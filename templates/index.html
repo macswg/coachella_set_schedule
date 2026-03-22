@@ -160,6 +160,7 @@ function scheduleApp() {
             this.updateCountdowns(currentSecs, acts);
             this.updateScreentimeDisplays(currentSecs, acts);
             this.updateLoadInRows(currentSecs, acts);
+            this.updateOnDeckRows(currentSecs, acts);
         },
 
         timeToSeconds(timeStr) {
@@ -317,6 +318,33 @@ function scheduleApp() {
                 const mins = Math.floor(total / 60);
                 const secs = Math.floor(total % 60);
                 el.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+        },
+
+        updateOnDeckRows(currentSecs, acts) {
+            for (let i = 0; i < acts.length; i++) {
+                const act = acts[i];
+                if (!act.isOnDeck) continue;
+
+                // Find the next regular (non-ondeck, non-loadin) act after this one
+                let nextRegularStart = null;
+                for (let j = i + 1; j < acts.length; j++) {
+                    if (!acts[j].isOnDeck && !acts[j].isLoadIn) {
+                        nextRegularStart = acts[j].scheduledStart;
+                        break;
+                    }
+                }
+
+                // Hide once the next act's projected start (scheduled + slip) has passed.
+                // Fallback: hide 1 hour after the On Deck row's own scheduled start.
+                let isPast;
+                if (nextRegularStart !== null) {
+                    isPast = currentSecs >= nextRegularStart + this.slip;
+                } else {
+                    isPast = act.scheduledStart !== null && currentSecs >= act.scheduledStart + 3600;
+                }
+
+                act.row.classList.toggle('act-ondeck-past', isPast);
             }
         },
 
