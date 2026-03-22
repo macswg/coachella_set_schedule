@@ -322,29 +322,10 @@ function scheduleApp() {
         },
 
         updateOnDeckRows(currentSecs, acts) {
-            for (let i = 0; i < acts.length; i++) {
-                const act = acts[i];
+            for (const act of acts) {
                 if (!act.isOnDeck) continue;
-
-                // Find the next regular (non-ondeck, non-loadin) act after this one
-                let nextRegularStart = null;
-                for (let j = i + 1; j < acts.length; j++) {
-                    if (!acts[j].isOnDeck && !acts[j].isLoadIn) {
-                        nextRegularStart = acts[j].scheduledStart;
-                        break;
-                    }
-                }
-
-                // Hide once the next act's projected start (scheduled + slip) has passed.
-                // Fallback: hide 1 hour after the On Deck row's own scheduled start.
-                let isPast;
-                if (nextRegularStart !== null) {
-                    isPast = currentSecs >= nextRegularStart + this.slip;
-                } else {
-                    isPast = act.scheduledStart !== null && currentSecs >= act.scheduledStart + 3600;
-                }
-
-                act.row.classList.toggle('act-ondeck-past', isPast);
+                const isPast = act.scheduledEnd !== null && currentSecs >= act.scheduledEnd;
+                act.row.classList.toggle('act-complete', isPast);
             }
         },
 

@@ -61,14 +61,16 @@ def _get_sheet() -> gspread.Worksheet:
 
 
 def _parse_time(time_str: str) -> Optional[time]:
-    """Parse a time string (HH:MM) to a time object."""
+    """Parse a time string to a time object. Handles HH:MM, HH:MM:SS, and H:MM AM/PM formats."""
     if not time_str or time_str.strip() == "":
         return None
-    try:
-        parts = time_str.strip().split(":")
-        return time(int(parts[0]), int(parts[1]))
-    except (ValueError, IndexError):
-        return None
+    time_str = time_str.strip()
+    for fmt in ("%H:%M", "%H:%M:%S", "%I:%M %p", "%I:%M:%S %p"):
+        try:
+            return datetime.strptime(time_str, fmt).time()
+        except ValueError:
+            continue
+    return None
 
 
 def _format_time(t: Optional[time]) -> str:
@@ -87,14 +89,20 @@ def _get_cell(row: list, col: int) -> str:
 
 
 def _parse_screentime_seconds(value: str) -> int:
-    """Parse screentime value which may be an integer or MM:SS string."""
+    """Parse screentime value which may be an integer, MM:SS, or HH:MM:SS."""
     value = value.strip()
     if not value:
         return 0
     if ":" in value:
         parts = value.split(":")
         try:
-            return int(parts[0]) * 60 + int(parts[1])
+            if len(parts) == 2:
+                minutes, seconds = parts
+                return int(minutes) * 60 + int(seconds)
+            if len(parts) == 3:
+                hours, minutes, seconds = parts
+                return int(hours) * 3600 + int(minutes) * 60 + int(seconds)
+            return 0
         except (ValueError, IndexError):
             return 0
     try:

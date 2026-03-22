@@ -33,6 +33,24 @@ def test_parse_mmss_large():
     assert _parse_screentime_seconds("60:00") == 3600
 
 
+# --- HH:MM:SS strings (duration-formatted sheet cells) ---
+
+def test_parse_hhmmss_zero():
+    assert _parse_screentime_seconds("00:00:00") == 0
+
+
+def test_parse_hhmmss_seconds_only():
+    assert _parse_screentime_seconds("00:00:45") == 45
+
+
+def test_parse_hhmmss_minutes_and_seconds():
+    assert _parse_screentime_seconds("00:01:30") == 90
+
+
+def test_parse_hhmmss_hours_minutes_and_seconds():
+    assert _parse_screentime_seconds("01:02:03") == 3723
+
+
 # --- edge cases ---
 
 def test_parse_empty_string():
