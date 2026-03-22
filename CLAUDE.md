@@ -43,7 +43,7 @@ The app reads data by column position (not header names) to handle sheets with n
 | Actual time on | F (col 6) | Recorded start time (filled by app) |
 | Actual time off | G (col 7) | Recorded end time (filled by app) |
 
-Header row is expected at row 5, data starts at row 6. Rows without valid scheduled start/end times are skipped.
+Header row is expected at row 5, data starts at row 6. Rows without valid scheduled start/end times are skipped. **On Deck rows must have a `scheduled_end`** — this is used to auto-hide the row once local time passes that value. Time values are parsed flexibly and support `HH:MM`, `HH:MM:SS`, `H:MM AM/PM`, and `H:MM:SS AM/PM` formats.
 
 ## MVP Scope
 
@@ -114,5 +114,7 @@ The `updateTime()` method runs every second and is the single entry point for al
 - `checkActAlerts()` — applies flash/warning CSS classes
 - `updateNowPlaying()` — renders the now-playing/up-next banner
 - `updateCountdowns()` — shows `[Starts in X:XX]` for future acts, hidden once started or past scheduled time
+- `updateOnDeckRows()` — adds `act-complete` to On Deck rows once local time passes their `scheduled_end`, hiding them via the same `hide-completed` mechanism as regular acts
+- `updateLoadInRows()` — adds `act-complete` to Load In rows 1 hour after their `scheduled_start`
 
 After WebSocket HTML swaps (from Google Sheets polling), `htmx:wsAfterMessage` triggers `updateTime()` to immediately re-apply countdowns and alerts before the browser paints. Use `htmx:wsAfterMessage` (not `htmx:afterSwap` or `htmx:afterSettle`) for flicker-free post-swap updates.

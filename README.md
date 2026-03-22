@@ -134,6 +134,13 @@ All settings via environment variables (`.env` file). See `.env.example` for the
 | E | Scheduled end |
 | F | Actual time on (written by app) |
 | G | Actual time off (written by app) |
+| H | Screentime total seconds (written by app, On Deck rows only) |
+
+Time values support `HH:MM`, `HH:MM:SS`, `H:MM AM/PM`, and `H:MM:SS AM/PM` formats.
+
+**Special row types:**
+- Rows with `Load In` in the name are informational — no start/end buttons, auto-hidden 1 hour after their scheduled start.
+- Rows with `On Deck` in the name show a screentime timer — they require a `scheduled_end` (column E) and are auto-hidden once local time passes that value.
 
 The app polls Google Sheets every 30 seconds (configurable via `POLL_INTERVAL_SECONDS` in `main.py`) and broadcasts updates to all connected clients.
 
