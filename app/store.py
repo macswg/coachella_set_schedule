@@ -1,4 +1,7 @@
 from datetime import datetime, time
+from zoneinfo import ZoneInfo
+
+from app.config import settings
 from typing import Optional
 from app.models import Act
 
@@ -109,7 +112,7 @@ def clear_actual_times(act_name: str) -> Optional[Act]:
 
 def start_screentime(act_name: str) -> Optional[Act]:
     """Start a screentime session for an act."""
-    session_start = datetime.now().time()
+    session_start = datetime.now(tz=ZoneInfo(settings.TIMEZONE)).time()
     _screentime_sessions[act_name] = session_start
     for i, act in enumerate(_schedule):
         if act.act_name == act_name:
@@ -124,7 +127,7 @@ def stop_screentime(act_name: str) -> Optional[Act]:
         return get_act(act_name)
 
     session_start = _screentime_sessions.pop(act_name)
-    now = datetime.now().time()
+    now = datetime.now(tz=ZoneInfo(settings.TIMEZONE)).time()
 
     # Compute elapsed seconds, handle midnight crossing
     start_secs = session_start.hour * 3600 + session_start.minute * 60 + session_start.second
@@ -142,6 +145,11 @@ def stop_screentime(act_name: str) -> Optional[Act]:
             })
             return _schedule[i]
     return None
+
+
+def write_active_screentimes() -> None:
+    """No-op for in-memory store — sessions are already in memory."""
+    pass
 
 
 def get_stage_name() -> str:

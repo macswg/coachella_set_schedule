@@ -13,6 +13,7 @@ To use:
 
 from datetime import datetime, time
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 import gspread
 from google.oauth2.service_account import Credentials
@@ -37,8 +38,9 @@ HEADER_ROW = 5  # Header is on row 5, data starts row 6
 _client: Optional[gspread.Client] = None
 _sheet: Optional[gspread.Worksheet] = None
 
-# In-memory screentime session tracking (survives schedule list rebuilds)
+# In-memory screentime tracking (survives schedule list rebuilds)
 _screentime_sessions: dict[str, time] = {}
+_screentime_totals: dict[str, int] = {}  # Cache new totals so post-write reads aren't stale
 
 
 def _get_sheet() -> gspread.Worksheet:
@@ -88,6 +90,14 @@ def _get_cell(row: list, col: int) -> str:
     return ""
 
 
+def _format_screentime(seconds: int) -> str:
+    """Format seconds as H:MM:SS for storage in Google Sheets."""
+    hours = seconds // 3600
+    mins = (seconds % 3600) // 60
+    secs = seconds % 60
+    return f"{hours}:{mins:02d}:{secs:02d}"
+
+
 def _parse_screentime_seconds(value: str) -> int:
     """Parse screentime value which may be an integer, MM:SS, or HH:MM:SS."""
     value = value.strip()
@@ -131,7 +141,11 @@ def get_schedule() -> list[Act]:
         if not act_name or not scheduled_start or (not scheduled_end and not is_no_end_row):
             continue
 
-        screentime_total = _parse_screentime_seconds(_get_cell(row, COL_SCREENTIME_TOTAL))
+        # Prefer in-memory cached total (avoids stale reads right after a write)
+        screentime_total = _screentime_totals.get(
+            act_name,
+            _parse_screentime_seconds(_get_cell(row, COL_SCREENTIME_TOTAL))
+        )
 
         act = Act(
             act_name=act_name,
@@ -211,23 +225,25 @@ def clear_actual_times(act_name: str) -> Optional[Act]:
     sheet.update_cell(row_num, COL_ACTUAL_END, "")
     sheet.update_cell(row_num, COL_SCREENTIME_TOTAL, "")
     _screentime_sessions.pop(act_name, None)
+    _screentime_totals.pop(act_name, None)
 
     return get_act(act_name)
 
 
 def start_screentime(act_name: str) -> Optional[Act]:
     """Start a screentime session for an act."""
-    _screentime_sessions[act_name] = datetime.now().time()
+    _screentime_sessions[act_name] = datetime.now(tz=ZoneInfo(settings.TIMEZONE)).time()
     return get_act(act_name)
 
 
 def stop_screentime(act_name: str) -> Optional[Act]:
     """Stop a screentime session and write accumulated total to sheet."""
     if act_name not in _screentime_sessions:
+        print(f"[screentime] stop called but no active session for {act_name!r}")
         return get_act(act_name)
 
     session_start = _screentime_sessions.pop(act_name)
-    now = datetime.now().time()
+    now = datetime.now(tz=ZoneInfo(settings.TIMEZONE)).time()
 
     # Compute elapsed seconds, handle midnight crossing
     start_secs = session_start.hour * 3600 + session_start.minute * 60 + session_start.second
@@ -236,10 +252,13 @@ def stop_screentime(act_name: str) -> Optional[Act]:
     if elapsed < 0:
         elapsed += 86400
 
+    print(f"[screentime] stop {act_name!r}: start={session_start} now={now} elapsed={elapsed}s")
+
     sheet = _get_sheet()
     row_num = _find_row(act_name)
 
     if row_num is None:
+        print(f"[screentime] row not found for {act_name!r} — sheet write skipped")
         return None
 
     # Read current total from sheet (treat sheet as authoritative)
@@ -252,9 +271,45 @@ def stop_screentime(act_name: str) -> Optional[Act]:
             break
 
     new_total = current_total + elapsed
-    sheet.update_cell(row_num, COL_SCREENTIME_TOTAL, new_total)
+    _screentime_totals[act_name] = new_total
+    print(f"[screentime] writing {new_total}s to row {row_num} col {COL_SCREENTIME_TOTAL}")
+    try:
+        sheet.update_cell(row_num, COL_SCREENTIME_TOTAL, _format_screentime(new_total))
+        print(f"[screentime] write succeeded: {_format_screentime(new_total)}")
+    except Exception as e:
+        print(f"[screentime] Failed to write {act_name} total to sheet: {e}")
 
     return get_act(act_name)
+
+
+def write_active_screentimes() -> None:
+    """Write current running totals for all active sessions to the sheet.
+    Called every poll interval so progress is preserved even if the container restarts."""
+    if not _screentime_sessions:
+        return
+
+    tz = ZoneInfo(settings.TIMEZONE)
+    now = datetime.now(tz=tz).time()
+    now_secs = now.hour * 3600 + now.minute * 60 + now.second
+    sheet = _get_sheet()
+
+    for act_name, session_start in list(_screentime_sessions.items()):
+        start_secs = session_start.hour * 3600 + session_start.minute * 60 + session_start.second
+        elapsed = now_secs - start_secs
+        if elapsed < 0:
+            elapsed += 86400
+
+        accumulated = _screentime_totals.get(act_name, 0)
+        current_total = accumulated + max(0, elapsed)
+
+        row_num = _find_row(act_name)
+        if row_num is None:
+            print(f"[screentime] Could not find row for {act_name} during periodic write")
+            continue
+        try:
+            sheet.update_cell(row_num, COL_SCREENTIME_TOTAL, _format_screentime(current_total))
+        except Exception as e:
+            print(f"[screentime] Periodic write failed for {act_name}: {e}")
 
 
 def get_stage_name() -> str:

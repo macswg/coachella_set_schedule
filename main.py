@@ -32,6 +32,7 @@ async def poll_schedule():
     while True:
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
         try:
+            store.write_active_screentimes()
             await broadcast_schedule_update()
         except Exception as e:
             print(f"Error polling schedule: {e}")

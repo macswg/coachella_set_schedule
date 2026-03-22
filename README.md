@@ -139,8 +139,18 @@ All settings via environment variables (`.env` file). See `.env.example` for the
 Time values support `HH:MM`, `HH:MM:SS`, `H:MM AM/PM`, and `H:MM:SS AM/PM` formats.
 
 **Special row types:**
-- Rows with `Load In` in the name are informational — no start/end buttons, auto-hidden 1 hour after their scheduled start.
-- Rows with `On Deck` in the name show a screentime timer — they require a `scheduled_end` (column E) and are auto-hidden once local time passes that value.
+
+**Load In rows** — any row whose name contains `Load In` (e.g. `Load In - Main Stage`):
+- Displayed as an informational label with no operator buttons
+- Automatically hidden 1 hour after their scheduled start time
+- No actual time recording; column E (scheduled end) is not required
+
+**On Deck rows** — any row whose name contains `On Deck` (e.g. `On Deck - Missy Elliot`):
+- Display a live screentime counter (MM:SS) instead of set start/end buttons
+- Operators use **START Screentime** / **STOP Screentime** buttons to track how long an act is visible on screen before going on
+- Accumulated screentime is written to column H in `H:MM:SS` format each time the session is stopped, and also synced every 30 seconds while a session is active
+- **Column E (scheduled end) is required** — the row is automatically hidden once local time passes this value
+- Multiple start/stop cycles accumulate (total is preserved across sessions)
 
 The app polls Google Sheets every 30 seconds (configurable via `POLL_INTERVAL_SECONDS` in `main.py`) and broadcasts updates to all connected clients.
 
