@@ -25,12 +25,16 @@ def calculate_slip(acts: list[Act], current_time: Optional[time] = None) -> int:
     slip = 0
 
     for act in acts:
+        if act.is_loadin or act.is_ondeck:
+            continue
         if act.actual_end:
             # Act completed - check if it ran late
             end_variance = act.end_variance or 0
             slip = max(0, end_variance)
         elif act.actual_start and not act.actual_end:
             # Act in progress - project when it will end
+            if act.scheduled_end is None:
+                continue
             actual_start_dt = time_to_datetime(act.actual_start)
             projected_end_dt = actual_start_dt + timedelta(seconds=act.scheduled_duration)
             scheduled_end_dt = time_to_datetime(act.scheduled_end)

@@ -784,3 +784,69 @@ body {
 .btn-reset-all:hover {
     background: #c82333;
 }
+
+/* Load-In Rows */
+.act-loadin {
+    border-left: 3px solid var(--text-muted);
+    opacity: 0.65;
+}
+
+.act-loadin:hover {
+    opacity: 0.8;
+}
+
+.act-loadin-label {
+    font-size: 1rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+}
+
+/* Screentime */
+.act-screentime {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.screentime-label {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.7rem;
+}
+
+.screentime-display {
+    font-variant-numeric: tabular-nums;
+    color: var(--accent-secondary);
+    font-weight: 500;
+}
+
+.screentime-live {
+    color: #b388ff;
+    animation: pulse 2s infinite;
+}
+
+/* Screentime buttons */
+.btn-screentime-start {
+    background-color: #6a1b9a;
+    color: white;
+}
+
+.btn-screentime-start:hover {
+    background-color: #8e24aa;
+}
+
+.btn-screentime-stop {
+    background-color: #4a148c;
+    color: #ce93d8;
+    border: 1px solid #7b1fa2;
+}
+
+.btn-screentime-stop:hover {
+    background-color: #6a1b9a;
+    color: white;
+}

@@ -144,11 +144,35 @@ async def record_end(act_name: str):
     return {"status": "ok"}
 
 
+@app.post("/acts/{act_name}/screentime/start")
+async def screentime_start(act_name: str):
+    """Start on-deck screentime for an act."""
+    act_name = unquote(act_name)
+    act = store.start_screentime(act_name)
+
+    if act:
+        await broadcast_schedule_update()
+
+    return {"status": "ok"}
+
+
+@app.post("/acts/{act_name}/screentime/stop")
+async def screentime_stop(act_name: str):
+    """Stop on-deck screentime for an act and persist total."""
+    act_name = unquote(act_name)
+    act = store.stop_screentime(act_name)
+
+    if act:
+        await broadcast_schedule_update()
+
+    return {"status": "ok"}
+
+
 @app.post("/acts/{act_name}/clear")
 async def clear_times(act_name: str):
     """Clear actual times for an act."""
     act_name = unquote(act_name)
-    act = store.clear_actual_times(act.act_name)
+    act = store.clear_actual_times(act_name)
 
     if act:
         await broadcast_schedule_update()

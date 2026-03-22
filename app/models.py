@@ -8,15 +8,31 @@ class Act(BaseModel):
 
     act_name: str
     scheduled_start: time
-    scheduled_end: time
+    scheduled_end: Optional[time] = None
     actual_start: Optional[time] = None
     actual_end: Optional[time] = None
     notes: Optional[str] = None
+    screentime_total_seconds: int = 0
+    screentime_session_start: Optional[time] = None
+
+    @computed_field
+    @property
+    def is_loadin(self) -> bool:
+        """Returns True if this is a load-in row (informational only, no buttons)."""
+        return 'load in' in self.act_name.lower()
+
+    @computed_field
+    @property
+    def is_ondeck(self) -> bool:
+        """Returns True if this is an on-deck row (screentime buttons only)."""
+        return 'on deck' in self.act_name.lower()
 
     @computed_field
     @property
     def scheduled_duration(self) -> int:
         """Scheduled duration in seconds."""
+        if self.scheduled_end is None:
+            return 0
         start_dt = datetime.combine(datetime.today(), self.scheduled_start)
         end_dt = datetime.combine(datetime.today(), self.scheduled_end)
         return int((end_dt - start_dt).total_seconds())
@@ -45,7 +61,7 @@ class Act(BaseModel):
     @property
     def end_variance(self) -> Optional[int]:
         """Variance in seconds from scheduled end (positive = late)."""
-        if self.actual_end:
+        if self.actual_end and self.scheduled_end:
             scheduled_dt = datetime.combine(datetime.today(), self.scheduled_end)
             actual_dt = datetime.combine(datetime.today(), self.actual_end)
             return int((actual_dt - scheduled_dt).total_seconds())

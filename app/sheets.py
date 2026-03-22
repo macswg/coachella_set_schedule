@@ -11,7 +11,7 @@ To use:
 4. Set GOOGLE_SHEETS_ID and GOOGLE_SERVICE_ACCOUNT_FILE in .env
 """
 
-from datetime import time
+from datetime import datetime, time
 from typing import Optional
 
 import gspread
@@ -30,11 +30,15 @@ COL_SCHEDULED_START = 4  # D - "scheduled start"
 COL_SCHEDULED_END = 5    # E - "scheduled end"
 COL_ACTUAL_START = 6     # F - "actual time on"
 COL_ACTUAL_END = 7       # G - "actual time off"
+COL_SCREENTIME_TOTAL = 8  # H - "screentime total seconds"
 
 HEADER_ROW = 5  # Header is on row 5, data starts row 6
 
 _client: Optional[gspread.Client] = None
 _sheet: Optional[gspread.Worksheet] = None
+
+# In-memory screentime session tracking (survives schedule list rebuilds)
+_screentime_sessions: dict[str, time] = {}
 
 
 def _get_sheet() -> gspread.Worksheet:
@@ -82,6 +86,23 @@ def _get_cell(row: list, col: int) -> str:
     return ""
 
 
+def _parse_screentime_seconds(value: str) -> int:
+    """Parse screentime value which may be an integer or MM:SS string."""
+    value = value.strip()
+    if not value:
+        return 0
+    if ":" in value:
+        parts = value.split(":")
+        try:
+            return int(parts[0]) * 60 + int(parts[1])
+        except (ValueError, IndexError):
+            return 0
+    try:
+        return int(value)
+    except ValueError:
+        return 0
+
+
 def get_schedule() -> list[Act]:
     """Fetch all acts from the Google Sheet."""
     sheet = _get_sheet()
@@ -94,9 +115,16 @@ def get_schedule() -> list[Act]:
         act_name = _get_cell(row, COL_ARTIST_NAME)
         scheduled_start = _parse_time(_get_cell(row, COL_SCHEDULED_START))
         scheduled_end = _parse_time(_get_cell(row, COL_SCHEDULED_END))
+
+        # Detect informational rows (no scheduled_end required)
+        is_no_end_row = act_name and ('load in' in act_name.lower() or 'on deck' in act_name.lower())
+
         # Skip rows without act name or required scheduled times
-        if not act_name or not scheduled_start or not scheduled_end:
+        if not act_name or not scheduled_start or (not scheduled_end and not is_no_end_row):
             continue
+
+        screentime_total = _parse_screentime_seconds(_get_cell(row, COL_SCREENTIME_TOTAL))
+
         act = Act(
             act_name=act_name,
             scheduled_start=scheduled_start,
@@ -104,6 +132,8 @@ def get_schedule() -> list[Act]:
             actual_start=_parse_time(_get_cell(row, COL_ACTUAL_START)),
             actual_end=_parse_time(_get_cell(row, COL_ACTUAL_END)),
             notes=None,
+            screentime_total_seconds=screentime_total,
+            screentime_session_start=_screentime_sessions.get(act_name),
         )
         acts.append(act)
 
@@ -168,9 +198,53 @@ def clear_actual_times(act_name: str) -> Optional[Act]:
     if row_num is None:
         return None
 
-    # Clear actual_start (F) and actual_end (G)
+    # Clear actual_start (F), actual_end (G), and screentime (H)
     sheet.update_cell(row_num, COL_ACTUAL_START, "")
     sheet.update_cell(row_num, COL_ACTUAL_END, "")
+    sheet.update_cell(row_num, COL_SCREENTIME_TOTAL, "")
+    _screentime_sessions.pop(act_name, None)
+
+    return get_act(act_name)
+
+
+def start_screentime(act_name: str) -> Optional[Act]:
+    """Start a screentime session for an act."""
+    _screentime_sessions[act_name] = datetime.now().time()
+    return get_act(act_name)
+
+
+def stop_screentime(act_name: str) -> Optional[Act]:
+    """Stop a screentime session and write accumulated total to sheet."""
+    if act_name not in _screentime_sessions:
+        return get_act(act_name)
+
+    session_start = _screentime_sessions.pop(act_name)
+    now = datetime.now().time()
+
+    # Compute elapsed seconds, handle midnight crossing
+    start_secs = session_start.hour * 3600 + session_start.minute * 60 + session_start.second
+    now_secs = now.hour * 3600 + now.minute * 60 + now.second
+    elapsed = now_secs - start_secs
+    if elapsed < 0:
+        elapsed += 86400
+
+    sheet = _get_sheet()
+    row_num = _find_row(act_name)
+
+    if row_num is None:
+        return None
+
+    # Read current total from sheet (treat sheet as authoritative)
+    all_values = sheet.get_all_values()
+    data_rows = all_values[HEADER_ROW:]
+    current_total = 0
+    for row in data_rows:
+        if _get_cell(row, COL_ARTIST_NAME) == act_name:
+            current_total = _parse_screentime_seconds(_get_cell(row, COL_SCREENTIME_TOTAL))
+            break
+
+    new_total = current_total + elapsed
+    sheet.update_cell(row_num, COL_SCREENTIME_TOTAL, new_total)
 
     return get_act(act_name)
 

@@ -145,6 +145,12 @@ function scheduleApp() {
                     actualEnd: this.timeToSeconds(row.dataset.actualEnd),
                     hasActualStart: row.dataset.actualStart !== '',
                     hasActualEnd: row.dataset.actualEnd !== '',
+                    isLoadIn: row.dataset.isLoadin === 'true',
+                    isOnDeck: row.dataset.isOndeck === 'true',
+                    screentimeTotal: parseInt(row.dataset.screentimeTotal || '0'),
+                    screentimeSessionStart: row.dataset.screentimeSessionStart
+                        ? this.timeToSeconds(row.dataset.screentimeSessionStart)
+                        : null,
                 });
             });
 
@@ -152,6 +158,8 @@ function scheduleApp() {
             this.checkActAlerts(currentSecs, acts);
             this.updateNowPlaying(currentSecs, acts);
             this.updateCountdowns(currentSecs, acts);
+            this.updateScreentimeDisplays(currentSecs, acts);
+            this.updateLoadInRows(currentSecs, acts);
         },
 
         timeToSeconds(timeStr) {
@@ -167,6 +175,7 @@ function scheduleApp() {
             let slip = 0;
 
             for (const act of acts) {
+                if (act.isLoadIn || act.isOnDeck) continue;
                 if (act.actualEnd !== null) {
                     // Completed act: slip is how early/late it ended
                     slip = act.actualEnd - act.scheduledEnd;
@@ -188,6 +197,7 @@ function scheduleApp() {
             const fiveMin = 300;
 
             for (const act of acts) {
+                if (act.isLoadIn || act.isOnDeck) continue;
                 act.row.classList.remove('flash-warning', 'flash-danger', 'act-live', 'act-live-ending');
 
                 if (!act.hasActualStart && currentSecs >= act.scheduledStart - fiveMin && currentSecs < act.scheduledEnd) {
@@ -218,6 +228,7 @@ function scheduleApp() {
             let nextUpcoming = null;
 
             for (const act of acts) {
+                if (act.isLoadIn || act.isOnDeck) continue;
                 const actName = act.row.querySelector('.act-name').textContent;
 
                 if (act.hasActualStart && !act.hasActualEnd) {
@@ -286,6 +297,38 @@ function scheduleApp() {
                 } else {
                     const remaining = act.scheduledStart - currentSecs;
                     el.textContent = '[Starts in ' + this.formatCountdown(remaining) + ']';
+                }
+            }
+        },
+
+        updateScreentimeDisplays(currentSecs, acts) {
+            for (const act of acts) {
+                if (act.isLoadIn) continue;
+                const el = act.row.querySelector('[data-screentime-el]');
+                if (!el) continue;
+
+                let total = act.screentimeTotal;
+                if (act.screentimeSessionStart !== null) {
+                    let elapsed = currentSecs - act.screentimeSessionStart;
+                    if (elapsed < 0) elapsed += 86400;
+                    total += Math.max(0, elapsed);
+                }
+
+                const mins = Math.floor(total / 60);
+                const secs = Math.floor(total % 60);
+                el.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+        },
+
+        updateLoadInRows(currentSecs, acts) {
+            for (const act of acts) {
+                if (!act.isLoadIn) continue;
+                if (act.scheduledStart !== null && currentSecs >= act.scheduledStart + 3600) {
+                    act.row.classList.remove('act-pending');
+                    act.row.classList.add('act-complete');
+                } else {
+                    act.row.classList.remove('act-complete');
+                    act.row.classList.add('act-pending');
                 }
             }
         },

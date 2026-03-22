@@ -1,9 +1,27 @@
-<div class="act-row {% if act.is_in_progress() %}act-in-progress{% elif act.is_complete() %}act-complete{% else %}act-pending{% endif %}"
+<div class="act-row {% if act.is_loadin %}act-loadin act-pending{% elif act.is_in_progress() %}act-in-progress{% elif act.is_complete() %}act-complete{% else %}act-pending{% endif %}"
      id="act-{{ act.act_name | replace(' ', '-') }}"
      data-scheduled-start="{{ act.scheduled_start.strftime('%H:%M') }}"
-     data-scheduled-end="{{ act.scheduled_end.strftime('%H:%M') }}"
+     data-scheduled-end="{{ act.scheduled_end.strftime('%H:%M') if act.scheduled_end else '' }}"
      data-actual-start="{{ act.actual_start.strftime('%H:%M:%S') if act.actual_start else '' }}"
-     data-actual-end="{{ act.actual_end.strftime('%H:%M:%S') if act.actual_end else '' }}">
+     data-actual-end="{{ act.actual_end.strftime('%H:%M:%S') if act.actual_end else '' }}"
+     data-is-loadin="{{ 'true' if act.is_loadin else 'false' }}"
+     data-is-ondeck="{{ 'true' if act.is_ondeck else 'false' }}"
+     data-screentime-total="{{ act.screentime_total_seconds }}"
+     data-screentime-session-start="{{ act.screentime_session_start.strftime('%H:%M:%S') if act.screentime_session_start else '' }}">
+
+{% if act.is_loadin %}
+    {# Load-in row: informational only, no buttons #}
+    <div class="act-status-indicator">
+        <span class="status-dot status-pending"></span>
+    </div>
+    <div class="act-info">
+        <div class="act-name act-loadin-label">{{ act.act_name }}</div>
+        <div class="act-times">
+            <span class="scheduled-times">{{ act.scheduled_start.strftime('%H:%M') }}</span>
+        </div>
+    </div>
+{% else %}
+    {# Regular act row #}
     <div class="act-status-indicator">
         {% if act.is_in_progress() %}
             <span class="status-dot status-live"></span>
@@ -18,7 +36,7 @@
         <div class="act-name">{{ act.act_name }}</div>
         <div class="act-times">
             <span class="scheduled-times">
-                {{ act.scheduled_start.strftime('%H:%M') }} - {{ act.scheduled_end.strftime('%H:%M') }}
+                {{ act.scheduled_start.strftime('%H:%M') }} - {{ act.scheduled_end.strftime('%H:%M') if act.scheduled_end else '?' }}
             </span>
             {% if act.actual_start or act.actual_end %}
                 <span class="actual-times">
@@ -44,29 +62,57 @@
                 {% endif %}
             </div>
         {% endif %}
+        {% if act.is_ondeck %}
+        <div class="act-screentime">
+            <span class="screentime-label">On Deck</span>
+            <span class="screentime-display" data-screentime-el>
+                {{ '%02d' % (act.screentime_total_seconds // 60) }}:{{ '%02d' % (act.screentime_total_seconds % 60) }}
+            </span>
+            {% if act.screentime_session_start %}<span class="screentime-live">●</span>{% endif %}
+        </div>
+        {% endif %}
     </div>
 
     {% if not view_only %}
     <div class="act-actions">
-        {% if not act.actual_start %}
-            <button class="btn btn-start"
-                    hx-post="/acts/{{ act.act_name | urlencode }}/start"
-                    hx-swap="none">
-                Mark Set Start
-            </button>
-        {% elif not act.actual_end %}
-            <button class="btn btn-end"
-                    hx-post="/acts/{{ act.act_name | urlencode }}/end"
-                    hx-swap="none">
-                Mark Set Complete
-            </button>
-        {% endif %}
-        {% if act.actual_start or act.actual_end %}
-            <button class="btn btn-clear"
-                    @click="confirm('Clear recorded times for {{ act.act_name }}?', '/acts/{{ act.act_name | urlencode }}/clear')">
-                Clear
-            </button>
+        {% if act.is_ondeck %}
+            {# On Deck act: screentime buttons only, no set buttons #}
+            {% if not act.screentime_session_start %}
+                <button class="btn btn-screentime-start"
+                        hx-post="/acts/{{ act.act_name | urlencode }}/screentime/start"
+                        hx-swap="none">
+                    Screen On
+                </button>
+            {% else %}
+                <button class="btn btn-screentime-stop"
+                        hx-post="/acts/{{ act.act_name | urlencode }}/screentime/stop"
+                        hx-swap="none">
+                    Screen Off
+                </button>
+            {% endif %}
+        {% else %}
+            {# Regular act: set buttons only, no screentime buttons #}
+            {% if not act.actual_start %}
+                <button class="btn btn-start"
+                        hx-post="/acts/{{ act.act_name | urlencode }}/start"
+                        hx-swap="none">
+                    Mark Set Start
+                </button>
+            {% elif not act.actual_end %}
+                <button class="btn btn-end"
+                        hx-post="/acts/{{ act.act_name | urlencode }}/end"
+                        hx-swap="none">
+                    Mark Set Complete
+                </button>
+            {% endif %}
+            {% if act.actual_start or act.actual_end %}
+                <button class="btn btn-clear"
+                        @click="confirm('Clear recorded times for {{ act.act_name }}?', '/acts/{{ act.act_name | urlencode }}/clear')">
+                    Clear
+                </button>
+            {% endif %}
         {% endif %}
     </div>
     {% endif %}
+{% endif %}
 </div>
