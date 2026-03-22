@@ -61,7 +61,9 @@ pip install -r requirements.txt
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 # Access the app
-# Local: http://localhost:8000
+# View-only:  http://localhost:8000
+# Operator:   http://localhost:8000/edit
+# Preview:    http://localhost:8000/preview  (operator + time-of-day override)
 # LAN: http://<your-ip>:8000
 ```
 
@@ -118,3 +120,5 @@ The `updateTime()` method runs every second and is the single entry point for al
 - `updateLoadInRows()` — adds `act-complete` to Load In rows 1 hour after their `scheduled_start`
 
 After WebSocket HTML swaps (from Google Sheets polling), `htmx:wsAfterMessage` triggers `updateTime()` to immediately re-apply countdowns and alerts before the browser paints. Use `htmx:wsAfterMessage` (not `htmx:afterSwap` or `htmx:afterSettle`) for flicker-free post-swap updates.
+
+The time-of-day override (`timeOverride` / `frozenTime`) is only surfaced on `/preview`. It freezes `currentTime` to a fixed value so operators can inspect how the page renders at any point in the schedule without waiting for real time to advance.

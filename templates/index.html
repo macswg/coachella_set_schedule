@@ -11,7 +11,7 @@
         </div>
         <div class="header-center">
             <div class="current-time" x-text="currentTime"></div>
-            {% if not view_only %}
+            {% if show_time_override %}
             <div class="time-override">
                 <input type="time"
                        x-model="timeOverride"

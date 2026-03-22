@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from typing import Optional
 from urllib.parse import unquote
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
@@ -101,6 +102,7 @@ async def index(request: Request):
     """Render the view-only schedule page."""
     context = get_template_context(request)
     context["view_only"] = True
+    context["show_time_override"] = False
     return templates.TemplateResponse("index.html", context)
 
 
@@ -109,6 +111,16 @@ async def edit(request: Request):
     """Render the operator schedule page with controls."""
     context = get_template_context(request)
     context["view_only"] = False
+    context["show_time_override"] = False
+    return templates.TemplateResponse("index.html", context)
+
+
+@app.get("/preview", response_class=HTMLResponse)
+async def preview(request: Request):
+    """Read-only schedule view with time-of-day override for previewing layout."""
+    context = get_template_context(request)
+    context["view_only"] = False
+    context["show_time_override"] = True
     return templates.TemplateResponse("index.html", context)
 
 
@@ -116,7 +128,7 @@ async def edit(request: Request):
 async def record_start(act_name: str):
     """Record the actual start time for an act."""
     act_name = unquote(act_name)
-    current_time = datetime.now().time()
+    current_time = datetime.now(tz=ZoneInfo(settings.TIMEZONE)).time()
 
     # Auto-complete any currently in-progress act
     for act in store.get_schedule():
@@ -136,7 +148,7 @@ async def record_start(act_name: str):
 async def record_end(act_name: str):
     """Record the actual end time for an act."""
     act_name = unquote(act_name)
-    current_time = datetime.now().time()
+    current_time = datetime.now(tz=ZoneInfo(settings.TIMEZONE)).time()
     act = store.update_actual_end(act_name, current_time)
 
     if act:
@@ -186,11 +198,11 @@ async def get_next_act():
     """Get the next act that hasn't started yet, with seconds until projected start."""
     acts = store.get_schedule()
     slip = calculate_slip(acts)
-    now = datetime.now()
+    now = datetime.now(tz=ZoneInfo(settings.TIMEZONE))
 
     for act in acts:
         if act.actual_start is None:
-            projected_start = datetime.combine(now.date(), act.scheduled_start) + timedelta(seconds=slip)
+            projected_start = datetime.combine(now.date(), act.scheduled_start, tzinfo=ZoneInfo(settings.TIMEZONE)) + timedelta(seconds=slip)
             seconds_until = int((projected_start - now).total_seconds())
             return {
                 "act_name": act.act_name,

@@ -80,6 +80,7 @@ venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
 Access the app:
 - **View-only:** http://localhost:8000 — schedule display without controls
 - **Operator:** http://localhost:8000/edit — full controls for recording times
+- **Preview:** http://localhost:8000/preview — full controls plus a time-of-day input to freeze the clock and inspect how the page looks at any time
 - **LAN:** http://\<your-ip\>:8000
 
 ## Stopping the Server
@@ -138,6 +139,8 @@ All settings via environment variables (`.env` file). See `.env.example` for the
 
 Time values support `HH:MM`, `HH:MM:SS`, `H:MM AM/PM`, and `H:MM:SS AM/PM` formats.
 
+> **Note:** Setlist items are displayed in the order they appear in the sheet, not sorted by time. Arrange rows in the sheet in the intended show order.
+
 **Special row types:**
 
 **Load In rows** — any row whose name contains `Load In` (e.g. `Load In - Main Stage`):
@@ -160,6 +163,7 @@ The app polls Google Sheets every 30 seconds (configurable via `POLL_INTERVAL_SE
 |--------|------|-------------|
 | `GET` | `/` | View-only schedule page |
 | `GET` | `/edit` | Operator schedule page |
+| `GET` | `/preview` | Operator page with time-of-day override input |
 | `POST` | `/acts/{name}/start` | Record actual start time |
 | `POST` | `/acts/{name}/end` | Record actual end time |
 | `POST` | `/acts/{name}/clear` | Clear actual times for an act |
