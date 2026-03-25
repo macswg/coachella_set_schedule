@@ -61,10 +61,17 @@ pip install -r requirements.txt
 # Run development server (auto-reload enabled)
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
+# Run tests
+python -m pytest
+python -m pytest -v                        # verbose
+python -m pytest tests/test_midnight.py   # specific file
+python -m pytest -k "midnight"            # by keyword
+
 # Access the app
-# View-only:  http://localhost:8000
-# Operator:   http://localhost:8000/edit
-# Preview:    http://localhost:8000/preview  (operator + time-of-day override)
+# View-only:    http://localhost:8000
+# Operator:     http://localhost:8000/edit
+# Preview:      http://localhost:8000/preview  (operator + time-of-day override, +24h toggle for post-midnight)
+# Stage board:  http://localhost:8000/stage    (large-format clock + up-next display)
 # LAN: http://<your-ip>:8000
 ```
 
@@ -86,10 +93,16 @@ coachella_set_schedule/
 ├── templates/
 │   ├── base.html        # Base template with HTMX/Alpine.js
 │   ├── index.html       # Main schedule view
+│   ├── stage.html       # Large-format stage display (/stage)
 │   └── components/
 │       └── act_row.html # Single act row partial
-└── static/
-    └── styles.css       # Dark theme styles
+├── static/
+│   └── styles.css       # Dark theme styles
+└── tests/
+    ├── test_models.py        # Act model unit tests
+    ├── test_slip.py          # Slip calculation unit tests
+    ├── test_midnight.py      # Midnight rollover tests
+    └── ...                   # API, store, and sheets tests
 ```
 
 ## Switching to Google Sheets
@@ -109,6 +122,7 @@ The app polls Google Sheets every 30 seconds (configurable via `POLL_INTERVAL_SE
 - Slip formula: `projected_start[i] = scheduled_start[i] + slip`
 - Conflict resolution: last-write-wins with timestamp
 - Timezone: Festival local time only (PDT for Coachella)
+- **Midnight rollover:** Acts past midnight (e.g. `01:00`) are stored as plain `time` objects; rollover is handled at comparison time. Server-side: `models.py` adds `timedelta(days=1)` when end < start. Client-side: `normalizeActTimes()` walks acts in sheet order and bumps any time that drops more than 1 hour below the previous act's time. Acts must be in chronological order in the sheet for this to work correctly.
 
 ## Client-Side Timer Architecture
 
@@ -122,4 +136,4 @@ The `updateTime()` method runs every second and is the single entry point for al
 
 After WebSocket HTML swaps (from Google Sheets polling), `htmx:wsAfterMessage` triggers `updateTime()` to immediately re-apply countdowns and alerts before the browser paints. Use `htmx:wsAfterMessage` (not `htmx:afterSwap` or `htmx:afterSettle`) for flicker-free post-swap updates.
 
-The time-of-day override (`timeOverride` / `frozenTime`) is only surfaced on `/preview`. It freezes `currentTime` to a fixed value so operators can inspect how the page renders at any point in the schedule without waiting for real time to advance.
+The time-of-day override (`timeOverride` / `frozenTime`) is only surfaced on `/preview`. It freezes `currentTime` to a fixed value so operators can inspect how the page renders at any point in the schedule without waiting for real time to advance. A `+24h` toggle adds 86400 seconds to `currentSecs` (without changing the displayed time string) to simulate post-midnight viewing.

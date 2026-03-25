@@ -58,6 +58,25 @@ def test_slip_in_progress_late_start():
     assert calculate_slip(acts) == 10 * 60
 
 
+# --- midnight rollover ---
+
+def test_slip_completed_on_time_crosses_midnight():
+    acts = [make_act(time(23, 0), time(1, 0), actual_start=time(23, 0), actual_end=time(1, 0))]
+    assert calculate_slip(acts) == 0
+
+
+def test_slip_completed_late_crosses_midnight():
+    acts = [make_act(time(23, 0), time(1, 0), actual_start=time(23, 0), actual_end=time(1, 10))]
+    assert calculate_slip(acts) == 10 * 60
+
+
+def test_slip_in_progress_late_start_crosses_midnight():
+    # Started 10 min late at 23:10, scheduled 23:00–01:00 (2h set)
+    # Projected end: 23:10 + 2h = 01:10 → 10 min late
+    acts = [make_act(time(23, 0), time(1, 0), actual_start=time(23, 10))]
+    assert calculate_slip(acts) == 10 * 60
+
+
 # --- format_duration ---
 
 def test_format_duration_zero():

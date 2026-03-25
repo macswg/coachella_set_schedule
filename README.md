@@ -10,6 +10,7 @@ Real-time schedule tracking for festival stages. Operators record actual start/e
 - **Record actual start/end times** for each act via operator controls
 - **Real-time sync** across all clients via WebSocket (HTMX `hx-ws`)
 - **View-only mode** (`/`) for spectators, **operator mode** (`/edit`) with full controls
+- **Stage display** (`/stage`) — large-format clock and up-next board for monitor at the stage
 - **Google Sheets integration** — reads schedule, writes actual times, polls every 30 seconds
 - **Visual alerts** — flash warnings before act starts, danger styling when running overtime
 - **Art-Net DMX integration** (optional) — reads 16-bit brightness from DMX and displays in UI
@@ -80,7 +81,8 @@ venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
 Access the app:
 - **View-only:** http://localhost:8000 — schedule display without controls
 - **Operator:** http://localhost:8000/edit — full controls for recording times
-- **Preview:** http://localhost:8000/preview — full controls plus a time-of-day input to freeze the clock and inspect how the page looks at any time
+- **Preview:** http://localhost:8000/preview — full controls plus a time-of-day input to freeze the clock at any point; use the **+24h** toggle to preview times past midnight
+- **Stage display:** http://localhost:8000/stage — large-format current time and up-next board for a monitor at the stage
 - **LAN:** http://\<your-ip\>:8000
 
 ## Stopping the Server
@@ -163,7 +165,8 @@ The app polls Google Sheets every 30 seconds (configurable via `POLL_INTERVAL_SE
 |--------|------|-------------|
 | `GET` | `/` | View-only schedule page |
 | `GET` | `/edit` | Operator schedule page |
-| `GET` | `/preview` | Operator page with time-of-day override input |
+| `GET` | `/preview` | Operator page with time-of-day override input and +24h toggle |
+| `GET` | `/stage` | Large-format stage display (current time + up-next) |
 | `POST` | `/acts/{name}/start` | Record actual start time |
 | `POST` | `/acts/{name}/end` | Record actual end time |
 | `POST` | `/acts/{name}/clear` | Clear actual times for an act |
@@ -191,18 +194,51 @@ coachella_set_schedule/
 ├── templates/
 │   ├── base.html        # Base template (HTMX/Alpine.js CDN)
 │   ├── index.html       # Main schedule view
+│   ├── stage.html       # Large-format stage display
 │   └── components/
 │       └── act_row.html # Single act row partial
-└── static/
-    └── styles.css       # Dark theme styles
+├── static/
+│   └── styles.css       # Dark theme styles
+└── tests/
+    ├── test_models.py         # Act model unit tests
+    ├── test_slip.py           # Slip calculation unit tests
+    ├── test_midnight.py       # Midnight rollover tests
+    ├── test_api.py            # API endpoint tests
+    ├── test_store.py          # Mock store tests
+    └── ...                    # Additional integration tests
 ```
-
-
 
 ## Development & Testing
 
 **Mock data mode:** Set `USE_GOOGLE_SHEETS=false` to use in-memory sample data (8 acts, no external dependencies).
 
-**Time override:** On `/preview`, use the time input in the header to freeze the clock at a specific time and inspect how the schedule looks at any point in the day. Click "Live" to resume real-time.
+**Time override:** On `/preview`, use the time input in the header to freeze the clock at a specific time. Toggle **+24h** to simulate times past midnight (e.g. enter `01:30` and toggle +24h to preview 1:30am). Click "Live" to resume real-time.
 
 **Reset endpoint:** `POST /api/reset` clears all actual times and broadcasts the update — useful for demo resets between tests.
+
+## Running Tests
+
+```bash
+# Run all tests
+python -m pytest
+
+# Run with verbose output
+python -m pytest -v
+
+# Run a specific test file
+python -m pytest tests/test_midnight.py -v
+
+# Run tests matching a keyword
+python -m pytest -k "midnight" -v
+```
+
+Tests use no external dependencies — no Google Sheets connection required. The test suite covers:
+
+| File | What it tests |
+|------|--------------|
+| `test_models.py` | Act model computed fields (duration, variance, state) |
+| `test_slip.py` | Slip calculation and formatting |
+| `test_midnight.py` | Midnight rollover: duration, variance, and slip across day boundaries |
+| `test_api.py` | HTTP endpoint behaviour |
+| `test_store.py` | In-memory store operations |
+| `test_sheets_*.py` | Google Sheets parsing, formatting, and caching logic |

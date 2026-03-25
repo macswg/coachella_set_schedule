@@ -35,6 +35,8 @@ class Act(BaseModel):
             return 0
         start_dt = datetime.combine(datetime.today(), self.scheduled_start)
         end_dt = datetime.combine(datetime.today(), self.scheduled_end)
+        if end_dt < start_dt:
+            end_dt += timedelta(days=1)
         return int((end_dt - start_dt).total_seconds())
 
     @computed_field
@@ -44,6 +46,8 @@ class Act(BaseModel):
         if self.actual_start and self.actual_end:
             start_dt = datetime.combine(datetime.today(), self.actual_start)
             end_dt = datetime.combine(datetime.today(), self.actual_end)
+            if end_dt < start_dt:
+                end_dt += timedelta(days=1)
             return int((end_dt - start_dt).total_seconds())
         return None
 
@@ -54,6 +58,8 @@ class Act(BaseModel):
         if self.actual_start:
             scheduled_dt = datetime.combine(datetime.today(), self.scheduled_start)
             actual_dt = datetime.combine(datetime.today(), self.actual_start)
+            if actual_dt < scheduled_dt - timedelta(hours=12):
+                actual_dt += timedelta(days=1)
             return int((actual_dt - scheduled_dt).total_seconds())
         return None
 
@@ -64,6 +70,8 @@ class Act(BaseModel):
         if self.actual_end and self.scheduled_end:
             scheduled_dt = datetime.combine(datetime.today(), self.scheduled_end)
             actual_dt = datetime.combine(datetime.today(), self.actual_end)
+            if actual_dt < scheduled_dt - timedelta(hours=12):
+                actual_dt += timedelta(days=1)
             return int((actual_dt - scheduled_dt).total_seconds())
         return None
 

@@ -70,6 +70,12 @@ def test_scheduled_duration_partial_hour():
     assert act.scheduled_duration == 45 * 60
 
 
+def test_scheduled_duration_crosses_midnight():
+    # 23:00 → 01:00 = 2 hours
+    act = make_act(scheduled_start=time(23, 0), scheduled_end=time(1, 0))
+    assert act.scheduled_duration == 2 * 3600
+
+
 # --- actual_duration ---
 
 def test_actual_duration_not_started():
@@ -84,6 +90,11 @@ def test_actual_duration_in_progress():
 
 def test_actual_duration_complete():
     act = make_act(actual_start=time(12, 0), actual_end=time(13, 0))
+    assert act.actual_duration == 3600
+
+
+def test_actual_duration_crosses_midnight():
+    act = make_act(actual_start=time(23, 30), actual_end=time(0, 30))
     assert act.actual_duration == 3600
 
 
@@ -128,4 +139,30 @@ def test_end_variance_late():
 
 def test_end_variance_early():
     act = make_act(actual_start=time(12, 0), actual_end=time(12, 50))
+    assert act.end_variance == -10 * 60
+
+
+# --- midnight rollover: end_variance ---
+
+def test_end_variance_crosses_midnight_on_time():
+    act = make_act(
+        scheduled_start=time(23, 0), scheduled_end=time(1, 0),
+        actual_start=time(23, 0), actual_end=time(1, 0),
+    )
+    assert act.end_variance == 0
+
+
+def test_end_variance_crosses_midnight_late():
+    act = make_act(
+        scheduled_start=time(23, 0), scheduled_end=time(1, 0),
+        actual_start=time(23, 0), actual_end=time(1, 10),
+    )
+    assert act.end_variance == 10 * 60
+
+
+def test_end_variance_crosses_midnight_early():
+    act = make_act(
+        scheduled_start=time(23, 0), scheduled_end=time(1, 0),
+        actual_start=time(23, 0), actual_end=time(0, 50),
+    )
     assert act.end_variance == -10 * 60

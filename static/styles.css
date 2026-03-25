@@ -661,6 +661,27 @@ body {
     opacity: 0.8;
 }
 
+.btn-next-day {
+    background-color: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-next-day.active {
+    background-color: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+}
+
+.btn-next-day:hover {
+    opacity: 0.8;
+}
+
 /* Act Alert States */
 .act-live {
     background-color: rgba(68, 255, 68, 0.15);
@@ -859,7 +880,6 @@ body {
 .stage-display {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
     padding: 20px;
     gap: 20px;
     background-color: var(--bg-primary);
@@ -889,17 +909,13 @@ body {
     line-height: 1;
 }
 
-/* Now-playing card fills remaining space and centers content */
+/* Now-playing card sizes to its content */
 .stage-np-section {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     margin-bottom: 0;
 }
 
 .stage-np-section:empty {
-    display: flex;
+    display: none;
 }
 
 .stage-np-section .now-playing,
