@@ -854,3 +854,90 @@ body {
     background-color: #ef5350;
     color: white;
 }
+
+/* Stage Display Page (/stage) */
+.stage-display {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 20px;
+    gap: 20px;
+    background-color: var(--bg-primary);
+}
+
+.stage-header .header-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+}
+
+.stage-tod-label-text {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-secondary);
+    line-height: 1;
+}
+
+.stage-display .stage-header h1 {
+    font-size: 2.5vw;
+}
+
+.stage-display .current-time {
+    font-size: 8vw;
+    line-height: 1;
+}
+
+/* Now-playing card fills remaining space and centers content */
+.stage-np-section {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0;
+}
+
+.stage-np-section:empty {
+    display: flex;
+}
+
+.stage-np-section .now-playing,
+.stage-np-section .up-next {
+    width: 100%;
+    margin: 0;
+}
+
+.stage-display .np-label {
+    font-size: 1.5vw;
+}
+
+.stage-display .np-artist {
+    font-size: 6vw;
+}
+
+.stage-display .np-countdown {
+    font-size: 8vw;
+}
+
+.stage-display .np-suffix {
+    font-size: 1.5vw;
+}
+
+.stage-start-time {
+    font-size: 3vw;
+    color: var(--text-primary);
+}
+
+.stage-start-time-value {
+    font-size: 6vw;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+.stage-start-time-label {
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 0.8em;
+}

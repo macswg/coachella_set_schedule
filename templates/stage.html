@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}{{ stage_name }} - Stage Display{% endblock %}
+
+{% block content %}
+<div class="stage-display" x-data="stageApp()" x-init="init()">
+
+    <!-- Header card — same structure as main display -->
+    <header class="header stage-header">
+        <div class="header-left">
+            <h1>{{ stage_name }}</h1>
+        </div>
+        <div class="header-center">
+            <div class="stage-tod-label-text">Current Time:</div>
+            <div class="current-time" x-text="currentTime"></div>
+        </div>
+        <div class="header-right"></div>
+    </header>
+
+    <!-- Now Playing / Up Next card — same structure as main display -->
+    <section class="now-playing-section stage-np-section" id="stage-up-next"></section>
+
+    <!-- Hidden schedule list kept in sync via WebSocket -->
+    <div style="display:none" hx-ext="ws" ws-connect="/ws?mode=view">
+        <div class="schedule-list" id="schedule-list">
+            {% for act in acts %}
+                {% include "components/act_row.html" %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+function stageApp() {
+    return {
+        currentTime: '',
+
+        init() {
+            this.updateTime();
+            setInterval(() => this.updateTime(), 1000);
+            document.body.addEventListener('htmx:wsAfterMessage', () => this.updateTime());
+        },
+
+        updateTime() {
+            const now = new Date();
+            this.currentTime = now.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+
+            const currentSecs = this.timeToSeconds(this.currentTime);
+            const acts = [];
+            document.querySelectorAll('.act-row').forEach(row => {
+                acts.push({
+                    name: row.querySelector('.act-name') ? row.querySelector('.act-name').textContent.trim() : '',
+                    scheduledStart: this.timeToSeconds(row.dataset.scheduledStart),
+                    scheduledEnd: this.timeToSeconds(row.dataset.scheduledEnd),
+                    scheduledStartTime: row.dataset.scheduledStart,
+                    actualStart: this.timeToSeconds(row.dataset.actualStart),
+                    actualEnd: this.timeToSeconds(row.dataset.actualEnd),
+                    hasActualStart: row.dataset.actualStart !== '',
+                    hasActualEnd: row.dataset.actualEnd !== '',
+                    isLoadIn: row.dataset.isLoadin === 'true',
+                    isOnDeck: row.dataset.isOndeck === 'true',
+                });
+            });
+
+            this.updateDisplay(currentSecs, acts);
+        },
+
+        timeToSeconds(timeStr) {
+            if (!timeStr) return null;
+            const parts = timeStr.split(':');
+            const hours = parseInt(parts[0]);
+            const mins = parseInt(parts[1]);
+            const secs = parts[2] ? parseInt(parts[2]) : 0;
+            return hours * 3600 + mins * 60 + secs;
+        },
+
+        updateDisplay(currentSecs, acts) {
+            const section = document.getElementById('stage-up-next');
+            if (!section) return;
+
+            let nowPlaying = null;
+            let upNext = null;
+            let upNextStartTime = '';
+            let countdown = '';
+            let isOvertime = false;
+            let isLateStart = false;
+
+            let shouldBePlayingNow = null;
+            let nextUpcoming = null;
+
+            for (const act of acts) {
+                if (act.isLoadIn || act.isOnDeck) continue;
+
+                if (act.hasActualStart && !act.hasActualEnd) {
+                    nowPlaying = act.name;
+                    const remaining = act.scheduledEnd - currentSecs;
+                    countdown = this.formatCountdown(remaining);
+                    isOvertime = remaining < 0;
+                    break;
+                }
+
+                if (act.hasActualEnd) continue;
+
+                if (!act.hasActualStart && currentSecs >= act.scheduledStart && currentSecs < act.scheduledEnd) {
+                    shouldBePlayingNow = { name: act.name, startSecs: act.scheduledStart, startTime: act.scheduledStartTime };
+                }
+
+                if (!act.hasActualStart && currentSecs < act.scheduledStart && !nextUpcoming) {
+                    nextUpcoming = { name: act.name, startSecs: act.scheduledStart, startTime: act.scheduledStartTime };
+                }
+            }
+
+            if (!nowPlaying && shouldBePlayingNow) {
+                upNext = shouldBePlayingNow.name;
+                upNextStartTime = shouldBePlayingNow.startTime;
+                const lateBy = currentSecs - shouldBePlayingNow.startSecs;
+                countdown = this.formatCountdown(-lateBy);
+                isLateStart = true;
+            } else if (!nowPlaying && nextUpcoming) {
+                upNext = nextUpcoming.name;
+                upNextStartTime = nextUpcoming.startTime;
+                countdown = this.formatCountdown(nextUpcoming.startSecs - currentSecs);
+            }
+
+            // Emit identical HTML to updateNowPlaying() in index.html
+            if (nowPlaying) {
+                section.innerHTML = `
+                    <div class="now-playing ${isOvertime ? 'is-overtime' : ''}">
+                        <span class="np-label">Now Playing</span>
+                        <span class="np-artist">${nowPlaying}</span>
+                        <div class="np-countdown-wrap">
+                            <span class="np-countdown ${isOvertime ? 'overtime' : ''}">${countdown}</span>
+                            <span class="np-suffix">${isOvertime ? 'over' : 'remaining'}</span>
+                        </div>
+                    </div>`;
+            } else if (upNext) {
+                section.innerHTML = `
+                    <div class="up-next ${isLateStart ? 'is-late-start' : ''}">
+                        <span class="np-label">${isLateStart ? 'Should Be On' : 'Up Next'}</span>
+                        <span class="np-artist">${upNext}</span>
+                        <span class="stage-start-time"><span class="stage-start-time-label">Scheduled Start:</span> <span class="stage-start-time-value">${upNextStartTime}</span></span>
+                        <div class="np-countdown-wrap">
+                            <span class="np-countdown ${isLateStart ? 'late-start' : ''}">${countdown}</span>
+                            <span class="np-suffix">${isLateStart ? 'late' : 'until start'}</span>
+                        </div>
+                    </div>`;
+            } else {
+                section.innerHTML = '';
+            }
+        },
+
+        formatCountdown(seconds) {
+            const isOver = seconds < 0;
+            const absSeconds = Math.abs(seconds);
+            const hrs = Math.floor(absSeconds / 3600);
+            const mins = Math.floor((absSeconds % 3600) / 60);
+            const secs = absSeconds % 60;
+
+            let time;
+            if (hrs > 0) {
+                time = `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            } else {
+                time = `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            return isOver ? `+${time}` : time;
+        },
+    }
+}
+</script>
+{% endblock %}

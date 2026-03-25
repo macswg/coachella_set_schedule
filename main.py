@@ -115,6 +115,15 @@ async def edit(request: Request):
     return templates.TemplateResponse("index.html", context)
 
 
+@app.get("/stage", response_class=HTMLResponse)
+async def stage(request: Request):
+    """Big-display stage board: stage name, clock, and up-next artist."""
+    context = get_template_context(request)
+    context["view_only"] = True
+    context["show_time_override"] = False
+    return templates.TemplateResponse("stage.html", context)
+
+
 @app.get("/preview", response_class=HTMLResponse)
 async def preview(request: Request):
     """Read-only schedule view with time-of-day override for previewing layout."""
