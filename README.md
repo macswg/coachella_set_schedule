@@ -19,6 +19,8 @@ Real-time schedule tracking for festival stages. Operators record actual start/e
 - **Mobile-friendly dark theme** optimized for outdoor use
 - **Docker support**
 
+
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -29,6 +31,8 @@ Real-time schedule tracking for festival stages. Operators record actual start/e
 | Data | Google Sheets API (gspread + google-auth) |
 | Real-time | WebSocket via HTMX ws extension |
 | Optional | Art-Net DMX brightness listener |
+
+
 
 ## Setup
 
@@ -51,7 +55,9 @@ To use Google Sheets, also mount your service account key:
 
 Then set `GOOGLE_SERVICE_ACCOUNT_FILE=/app/service-account.json` in `.env`.
 
-### Manual Setup
+
+
+### Manual Setup (if not using Docker)
 
 ```bash
 # Create virtual environment
@@ -64,6 +70,8 @@ venv/bin/pip install -r requirements.txt
 cp .env.example .env
 # Edit .env with your settings (see Configuration below)
 ```
+
+
 
 ## Running the Server
 
@@ -84,6 +92,8 @@ Access the app:
 - **Preview:** http://localhost:8000/preview — full controls plus a time-of-day input to freeze the clock at any point; use the **+24h** toggle to preview times past midnight
 - **Stage display:** http://localhost:8000/stage — large-format current time and up-next board for a monitor at the stage
 - **LAN:** http://\<your-ip\>:8000
+
+
 
 ## Stopping the Server
 
