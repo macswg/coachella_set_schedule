@@ -103,7 +103,7 @@ async def index(request: Request):
     context = get_template_context(request)
     context["view_only"] = True
     context["show_time_override"] = False
-    return templates.TemplateResponse("index.html", context)
+    return templates.TemplateResponse(request, "index.html", context)
 
 
 @app.get("/edit", response_class=HTMLResponse)
@@ -112,7 +112,7 @@ async def edit(request: Request):
     context = get_template_context(request)
     context["view_only"] = False
     context["show_time_override"] = False
-    return templates.TemplateResponse("index.html", context)
+    return templates.TemplateResponse(request, "index.html", context)
 
 
 @app.get("/stage", response_class=HTMLResponse)
@@ -121,7 +121,7 @@ async def stage(request: Request):
     context = get_template_context(request)
     context["view_only"] = True
     context["show_time_override"] = False
-    return templates.TemplateResponse("stage.html", context)
+    return templates.TemplateResponse(request, "stage.html", context)
 
 
 @app.get("/preview", response_class=HTMLResponse)
@@ -130,7 +130,7 @@ async def preview(request: Request):
     context = get_template_context(request)
     context["view_only"] = False
     context["show_time_override"] = True
-    return templates.TemplateResponse("index.html", context)
+    return templates.TemplateResponse(request, "index.html", context)
 
 
 @app.post("/acts/{act_name}/start")
