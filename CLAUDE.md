@@ -128,8 +128,8 @@ The app polls Google Sheets every 30 seconds (configurable via `POLL_INTERVAL_SE
 
 The `updateTime()` method runs every second and is the single entry point for all per-tick logic. It queries `.act-row` elements once, parses their `data-*` attributes into a shared `acts` array, then passes `(currentSecs, acts)` to:
 - `calculateSlip()` — computes accumulated slip from actual vs scheduled times
-- `checkActAlerts()` — applies flash/warning CSS classes
-- `updateNowPlaying()` — renders the now-playing/up-next banner
+- `checkActAlerts()` — applies flash/warning CSS classes; suppresses `flash-warning` on act rows when the up-next section is already pulsing (act starting within 2 minutes) to avoid competing animations
+- `updateNowPlaying()` — renders the now-playing/up-next banner; adds `starting-soon` pulse class when next act is ≤2 minutes away; updates countdown text in-place to avoid restarting CSS animations
 - `updateCountdowns()` — shows `[Starts in X:XX]` for future acts, hidden once started or past scheduled time
 - `updateOnDeckRows()` — adds `act-complete` to On Deck rows once local time passes their `scheduled_end`, hiding them via the same `hide-completed` mechanism as regular acts
 - `updateLoadInRows()` — adds `act-complete` to Load In rows 1 hour after their `scheduled_start`
@@ -137,3 +137,13 @@ The `updateTime()` method runs every second and is the single entry point for al
 After WebSocket HTML swaps (from Google Sheets polling), `htmx:wsAfterMessage` triggers `updateTime()` to immediately re-apply countdowns and alerts before the browser paints. Use `htmx:wsAfterMessage` (not `htmx:afterSwap` or `htmx:afterSettle`) for flicker-free post-swap updates.
 
 The time-of-day override (`timeOverride` / `frozenTime`) is only surfaced on `/preview`. It freezes `currentTime` to a fixed value so operators can inspect how the page renders at any point in the schedule without waiting for real time to advance. A `+24h` toggle adds 86400 seconds to `currentSecs` (without changing the displayed time string) to simulate post-midnight viewing.
+
+## Offline Resilience
+
+The app continues to function client-side if the server goes down after the page has loaded — Alpine.js keeps running the clock and all calculations using the last received schedule state. Two mechanisms protect against accidental data loss:
+
+- **Server status indicator** — "Live Data" (green) / "Offline Data" (red) shown under the stage name, driven by `htmx:wsOpen` / `htmx:wsClose` events
+- **`beforeunload` warning** — browser confirmation dialog fires if the user tries to close or refresh while offline
+- **`overscroll-behavior: none`** — prevents pull-to-refresh on mobile
+
+Note: a service worker cache was considered but removed — service workers require HTTPS, and this app runs over plain HTTP on LAN.

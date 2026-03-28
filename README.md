@@ -46,6 +46,22 @@ cp .env.example .env
 docker compose up --build
 ```
 
+**Run on boot (auto-restart):**
+
+The `docker-compose.yml` is configured with `restart: unless-stopped`, so the container will automatically restart on reboot or crash. You just need to ensure the Docker daemon itself starts on boot:
+
+```bash
+sudo systemctl enable docker
+```
+
+Then start the container once:
+
+```bash
+docker compose up -d
+```
+
+From that point on it will start automatically with the machine. It stays stopped only if you explicitly run `docker compose stop`.
+
 To use Google Sheets, also mount your service account key:
 
 ```yaml

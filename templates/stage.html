@@ -9,6 +9,10 @@
     <header class="header stage-header">
         <div class="header-left">
             <h1>{{ stage_name }}</h1>
+            <div class="server-status">
+                <span class="server-status-dot" :class="{ 'offline': !serverOnline }"></span>
+                <span class="server-status-label" :style="serverOnline ? 'color: #44ff44' : 'color: #ff4444'" x-text="serverOnline ? 'Live Data' : 'Offline Data - DO NOT REFRESH'"></span>
+            </div>
         </div>
         <div class="header-center">
             <div class="stage-tod-label-text">Current Time:</div>
@@ -34,11 +38,17 @@
 function stageApp() {
     return {
         currentTime: '',
+        serverOnline: false,
 
         init() {
             this.updateTime();
             setInterval(() => this.updateTime(), 1000);
             document.body.addEventListener('htmx:wsAfterMessage', () => this.updateTime());
+            document.body.addEventListener('htmx:wsOpen', () => { this.serverOnline = true; });
+            document.body.addEventListener('htmx:wsClose', () => { this.serverOnline = false; });
+            window.addEventListener('beforeunload', (e) => {
+                if (!this.serverOnline) e.preventDefault();
+            });
         },
 
         updateTime() {
@@ -138,6 +148,7 @@ function stageApp() {
                 }
             }
 
+            let startingSoon = false;
             if (!nowPlaying && shouldBePlayingNow) {
                 upNext = shouldBePlayingNow.name;
                 upNextStartTime = shouldBePlayingNow.startTime;
@@ -148,30 +159,48 @@ function stageApp() {
                 upNext = nextUpcoming.name;
                 upNextStartTime = nextUpcoming.startTime;
                 countdown = this.formatCountdown(nextUpcoming.startSecs - currentSecs);
+                const secsUntilStart = nextUpcoming.startSecs - currentSecs;
+                startingSoon = secsUntilStart > 0 && secsUntilStart <= 120;
             }
 
-            // Emit identical HTML to updateNowPlaying() in index.html
+            // Avoid rebuilding innerHTML every tick to preserve CSS animations
+            const existingDiv = section.firstElementChild;
             if (nowPlaying) {
-                section.innerHTML = `
-                    <div class="now-playing ${isOvertime ? 'is-overtime' : ''}">
-                        <span class="np-label">Now Playing</span>
-                        <span class="np-artist">${nowPlaying}</span>
-                        <div class="np-countdown-wrap">
-                            <span class="np-countdown ${isOvertime ? 'overtime' : ''}">${countdown}</span>
-                            <span class="np-suffix">${isOvertime ? 'over' : 'remaining'}</span>
-                        </div>
-                    </div>`;
+                const cl = `now-playing${isOvertime ? ' is-overtime' : ''}`;
+                if (existingDiv?.classList.contains('now-playing') && existingDiv.querySelector('.np-artist')?.textContent === nowPlaying) {
+                    existingDiv.className = cl;
+                    const cd = existingDiv.querySelector('.np-countdown');
+                    if (cd) { cd.className = `np-countdown${isOvertime ? ' overtime' : ''}`; cd.textContent = countdown; }
+                    existingDiv.querySelector('.np-suffix').textContent = isOvertime ? 'over' : 'remaining';
+                } else {
+                    section.innerHTML = `
+                        <div class="${cl}">
+                            <span class="np-label">Now Playing</span>
+                            <span class="np-artist">${nowPlaying}</span>
+                            <div class="np-countdown-wrap">
+                                <span class="np-countdown${isOvertime ? ' overtime' : ''}">${countdown}</span>
+                                <span class="np-suffix">${isOvertime ? 'over' : 'remaining'}</span>
+                            </div>
+                        </div>`;
+                }
             } else if (upNext) {
-                section.innerHTML = `
-                    <div class="up-next ${isLateStart ? 'is-late-start' : ''}">
-                        <span class="np-label">${isLateStart ? 'Should Be On' : 'Up Next'}</span>
-                        <span class="np-artist">${upNext}</span>
-                        <span class="stage-start-time"><span class="stage-start-time-label">Scheduled Start:</span> <span class="stage-start-time-value">${upNextStartTime}</span></span>
-                        <div class="np-countdown-wrap">
-                            <span class="np-countdown ${isLateStart ? 'late-start' : ''}">${countdown}</span>
-                            <span class="np-suffix">${isLateStart ? 'late' : 'until start'}</span>
-                        </div>
-                    </div>`;
+                const cl = `up-next${isLateStart ? ' is-late-start' : ''}`;
+                if (existingDiv?.classList.contains('up-next') && existingDiv.querySelector('.np-artist')?.textContent === upNext && existingDiv.classList.contains('is-late-start') === isLateStart) {
+                    existingDiv.classList.toggle('starting-soon', startingSoon);
+                    const cd = existingDiv.querySelector('.np-countdown');
+                    if (cd) cd.textContent = countdown;
+                } else {
+                    section.innerHTML = `
+                        <div class="${cl}${startingSoon ? ' starting-soon' : ''}">
+                            <span class="np-label">${isLateStart ? 'Should Be On' : 'Up Next'}</span>
+                            <span class="np-artist">${upNext}</span>
+                            <span class="stage-start-time"><span class="stage-start-time-label">Scheduled Start:</span> <span class="stage-start-time-value">${upNextStartTime}</span></span>
+                            <div class="np-countdown-wrap">
+                                <span class="np-countdown${isLateStart ? ' late-start' : ''}">${countdown}</span>
+                                <span class="np-suffix">${isLateStart ? 'late' : 'until start'}</span>
+                            </div>
+                        </div>`;
+                }
             } else {
                 section.innerHTML = '';
             }

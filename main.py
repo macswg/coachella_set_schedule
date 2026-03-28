@@ -83,6 +83,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 
+
 def get_template_context(request: Request = None) -> dict:
     """Build the common template context."""
     acts = store.get_schedule()
