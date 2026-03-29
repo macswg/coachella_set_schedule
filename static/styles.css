@@ -996,3 +996,56 @@ body {
     50%  { background-color: rgba(78, 205, 196, 0.2); }
     100% { background-color: transparent; }
 }
+
+/* Stage lower sections: On Deck + Load In side-by-side */
+.stage-lower-sections {
+    flex-direction: row;
+    gap: 20px;
+}
+
+.stage-lower-card {
+    flex: 1;
+    margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.stage-lower-card:empty {
+    display: none;
+}
+
+.stage-lower-card-inner {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 20px;
+}
+
+.stage-on-deck-card {
+    background: linear-gradient(135deg, rgba(255, 165, 0, 0.12) 0%, rgba(255, 165, 0, 0.06) 100%);
+}
+
+.stage-load-in-card {
+    background: linear-gradient(135deg, rgba(150, 100, 255, 0.12) 0%, rgba(150, 100, 255, 0.06) 100%);
+}
+
+.stage-on-deck-card .np-label { color: #ffa500; }
+.stage-load-in-card .np-label { color: #9664ff; }
+
+.stage-lower-card .np-label { font-size: 1.2vw; }
+.stage-lower-card .np-artist { font-size: 3.5vw; }
+.stage-lower-times { font-size: 2.8vw; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+
+/* Compact mode for main card when lower sections are visible */
+.stage-np-section.stage-np-compact { padding: 12px; }
+.stage-np-section.stage-np-compact .now-playing,
+.stage-np-section.stage-np-compact .up-next { gap: 4px; }
+.stage-np-section.stage-np-compact .np-label  { font-size: 0.9vw; }
+.stage-np-section.stage-np-compact .np-artist { font-size: 3vw; }
+.stage-np-section.stage-np-compact .np-countdown { font-size: 4vw; }
+.stage-np-section.stage-np-compact .np-suffix { font-size: 0.9vw; }
+.stage-np-section.stage-np-compact .stage-start-time { font-size: 1.5vw; }
+.stage-np-section.stage-np-compact .stage-start-time-value { font-size: 3vw; }

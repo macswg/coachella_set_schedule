@@ -24,6 +24,12 @@
     <!-- Now Playing / Up Next card — same structure as main display -->
     <section class="now-playing-section stage-np-section" id="stage-up-next"></section>
 
+    <!-- On Deck + Load In cards — shown side-by-side when active -->
+    <div class="stage-lower-sections" id="stage-lower-sections" style="display:none">
+        <section class="now-playing-section stage-lower-card" id="stage-on-deck"></section>
+        <section class="now-playing-section stage-lower-card" id="stage-load-in"></section>
+    </div>
+
     <!-- Hidden schedule list kept in sync via WebSocket -->
     <div style="display:none" hx-ext="ws" ws-connect="/ws?mode=view">
         <div class="schedule-list" id="schedule-list">
@@ -68,6 +74,7 @@ function stageApp() {
                     scheduledStart: this.timeToSeconds(row.dataset.scheduledStart),
                     scheduledEnd: this.timeToSeconds(row.dataset.scheduledEnd),
                     scheduledStartTime: row.dataset.scheduledStart,
+                    scheduledEndTime: row.dataset.scheduledEnd,
                     actualStart: this.timeToSeconds(row.dataset.actualStart),
                     actualEnd: this.timeToSeconds(row.dataset.actualEnd),
                     hasActualStart: row.dataset.actualStart !== '',
@@ -203,6 +210,33 @@ function stageApp() {
                 }
             } else {
                 section.innerHTML = '';
+            }
+
+            // On Deck and Load In lower cards
+            const onDeckAct = acts.find(a =>
+                a.isOnDeck && a.scheduledEnd !== null &&
+                currentSecs >= a.scheduledStart - 10800 && currentSecs < a.scheduledEnd
+            );
+            const loadInAct = acts.find(a =>
+                a.isLoadIn && a.scheduledStart !== null &&
+                currentSecs >= a.scheduledStart - 10800 && currentSecs < a.scheduledStart + 3600
+            );
+            const hasLower = !!(onDeckAct || loadInAct);
+            section.classList.toggle('stage-np-compact', hasLower);
+            document.getElementById('stage-lower-sections').style.display = hasLower ? 'flex' : 'none';
+
+            const onDeckEl = document.getElementById('stage-on-deck');
+            if (onDeckAct) {
+                onDeckEl.innerHTML = `<div class="stage-lower-card-inner stage-on-deck-card"><span class="np-label">On Deck</span><span class="np-artist">${onDeckAct.name}</span><span class="stage-lower-times">${onDeckAct.scheduledStartTime} – ${onDeckAct.scheduledEndTime}</span></div>`;
+            } else {
+                onDeckEl.innerHTML = '';
+            }
+
+            const loadInEl = document.getElementById('stage-load-in');
+            if (loadInAct) {
+                loadInEl.innerHTML = `<div class="stage-lower-card-inner stage-load-in-card"><span class="np-label">Load In</span><span class="np-artist">${loadInAct.name}</span><span class="stage-lower-times">${loadInAct.scheduledStartTime}</span></div>`;
+            } else {
+                loadInEl.innerHTML = '';
             }
         },
 
