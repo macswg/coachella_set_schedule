@@ -25,7 +25,7 @@ class Act(BaseModel):
     @property
     def is_ondeck(self) -> bool:
         """Returns True if this is an on-deck row (screentime buttons only)."""
-        return 'on deck' in self.act_name.lower()
+        return 'on deck' in self.act_name.lower() or 'stage time' in self.act_name.lower()
 
     @computed_field
     @property

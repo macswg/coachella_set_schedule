@@ -26,7 +26,7 @@ SCOPES = [
 ]
 
 # Column indices (1-based for gspread)
-COL_ARTIST_NAME = 2      # B - "artist name"
+COL_ARTIST_NAME = 3      # C - "artist name"
 COL_SCHEDULED_START = 4  # D - "scheduled start"
 COL_SCHEDULED_END = 5    # E - "scheduled end"
 COL_ACTUAL_START = 6     # F - "actual time on"
@@ -135,7 +135,7 @@ def get_schedule() -> list[Act]:
         scheduled_end = _parse_time(_get_cell(row, COL_SCHEDULED_END))
 
         # Detect informational rows (no scheduled_end required)
-        is_no_end_row = act_name and ('load in' in act_name.lower() or 'on deck' in act_name.lower())
+        is_no_end_row = act_name and ('load in' in act_name.lower() or 'on deck' in act_name.lower() or 'stage time' in act_name.lower())
 
         # Skip rows without act name or required scheduled times
         if not act_name or not scheduled_start or (not scheduled_end and not is_no_end_row):

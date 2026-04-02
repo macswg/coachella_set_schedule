@@ -37,7 +37,7 @@ The app reads data by column position (not header names) to handle sheets with n
 
 | Column | Position | Description |
 |--------|----------|-------------|
-| Artist name | B (col 2) | Artist/act name |
+| Artist name | C (col 3) | Artist/act name |
 | Scheduled start | D (col 4) | Published start time (e.g., `14:30`) |
 | Scheduled end | E (col 5) | Published end time |
 | Actual time on | F (col 6) | Recorded start time (filled by app) |
