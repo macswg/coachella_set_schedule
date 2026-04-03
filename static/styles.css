@@ -838,6 +838,12 @@ body {
     background: #c82333;
 }
 
+.btn-reset-all:disabled {
+    background: #555;
+    color: #999;
+    cursor: not-allowed;
+}
+
 /* Load-In Rows */
 .act-loadin {
     border-left: 3px solid var(--text-muted);

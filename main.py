@@ -104,6 +104,7 @@ def get_template_context(request: Request = None) -> dict:
         "slip": slip,
         "format_variance": format_variance,
         "sheet_tab": store.get_current_show() if settings.USE_GOOGLE_SHEETS else None,
+        "use_google_sheets": settings.USE_GOOGLE_SHEETS,
         "has_next_show": store.has_next_show(),
         "current_show": store.get_current_show(),
         "next_show": store.get_next_show(),

@@ -199,7 +199,7 @@ The app polls Google Sheets every 30 seconds (configurable via `POLL_INTERVAL_SE
 | `POST` | `/acts/{name}/start` | Record actual start time |
 | `POST` | `/acts/{name}/end` | Record actual end time |
 | `POST` | `/acts/{name}/clear` | Clear actual times for an act |
-| `POST` | `/api/reset` | Clear all actual times (testing) |
+| `POST` | `/api/reset` | Clear all actual times (disabled when `USE_GOOGLE_SHEETS=true`) |
 | `GET` | `/api/brightness` | Current Art-Net brightness value |
 | `WS` | `/ws?mode=view\|edit` | WebSocket connection |
 
@@ -245,7 +245,9 @@ coachella_set_schedule/
 
 **Time override:** On `/preview`, use the time input in the header to freeze the clock at a specific time. Toggle **+24h** to simulate times past midnight (e.g. enter `01:30` and toggle +24h to preview 1:30am). Click "Live" to resume real-time.
 
-**Reset endpoint:** `POST /api/reset` clears all actual times and broadcasts the update — useful for demo resets between tests.
+**Reset endpoint:** `POST /api/reset` clears all actual times and broadcasts the update — useful for demo resets between tests. Disabled (button greyed out) when `USE_GOOGLE_SHEETS=true`.
+
+**Rec Triggers toggle:** The **Rec Triggers** button on `/edit` enables or disables automatic time recording triggers.
 
 ## Running Tests
 
