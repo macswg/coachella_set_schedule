@@ -66,17 +66,17 @@ function stageApp() {
                 hour12: false
             });
 
-            let currentSecs = this.timeToSeconds(this.currentTime);
+            let currentSecs = timeToSeconds(this.currentTime);
             const acts = [];
             document.querySelectorAll('.act-row').forEach(row => {
                 acts.push({
                     name: row.querySelector('.act-name') ? row.querySelector('.act-name').textContent.trim() : '',
-                    scheduledStart: this.timeToSeconds(row.dataset.scheduledStart),
-                    scheduledEnd: this.timeToSeconds(row.dataset.scheduledEnd),
+                    scheduledStart: timeToSeconds(row.dataset.scheduledStart),
+                    scheduledEnd: timeToSeconds(row.dataset.scheduledEnd),
                     scheduledStartTime: row.dataset.scheduledStart,
                     scheduledEndTime: row.dataset.scheduledEnd,
-                    actualStart: this.timeToSeconds(row.dataset.actualStart),
-                    actualEnd: this.timeToSeconds(row.dataset.actualEnd),
+                    actualStart: timeToSeconds(row.dataset.actualStart),
+                    actualEnd: timeToSeconds(row.dataset.actualEnd),
                     hasActualStart: row.dataset.actualStart !== '',
                     hasActualEnd: row.dataset.actualEnd !== '',
                     isLoadIn: row.dataset.isLoadin === 'true',
@@ -84,39 +84,8 @@ function stageApp() {
                 });
             });
 
-            currentSecs = this.normalizeActTimes(currentSecs, acts);
+            currentSecs = normalizeActTimes(currentSecs, acts);
             this.updateDisplay(currentSecs, acts);
-        },
-
-        timeToSeconds(timeStr) {
-            if (!timeStr) return null;
-            const parts = timeStr.split(':');
-            const hours = parseInt(parts[0]);
-            const mins = parseInt(parts[1]);
-            const secs = parts[2] ? parseInt(parts[2]) : 0;
-            return hours * 3600 + mins * 60 + secs;
-        },
-
-        normalizeActTimes(currentSecs, acts) {
-            let prevStart = 0;
-            for (const act of acts) {
-                if (act.scheduledStart === null) continue;
-                if (act.scheduledStart < prevStart - 3600) {
-                    act.scheduledStart += 86400;
-                    if (act.scheduledEnd !== null) act.scheduledEnd += 86400;
-                    if (act.actualStart !== null) act.actualStart += 86400;
-                    if (act.actualEnd !== null) act.actualEnd += 86400;
-                }
-                if (act.scheduledEnd !== null && act.scheduledEnd < act.scheduledStart) {
-                    act.scheduledEnd += 86400;
-                }
-                prevStart = act.scheduledStart;
-            }
-            const maxStart = Math.max(0, ...acts.filter(a => a.scheduledStart !== null).map(a => a.scheduledStart));
-            if (maxStart > 86400 && currentSecs < 21600) {
-                currentSecs += 86400;
-            }
-            return currentSecs;
         },
 
         updateDisplay(currentSecs, acts) {
@@ -139,7 +108,7 @@ function stageApp() {
                 if (act.hasActualStart && !act.hasActualEnd) {
                     nowPlaying = act.name;
                     const remaining = act.scheduledEnd - currentSecs;
-                    countdown = this.formatCountdown(remaining);
+                    countdown = formatCountdown(remaining);
                     isOvertime = remaining < 0;
                     break;
                 }
@@ -160,12 +129,12 @@ function stageApp() {
                 upNext = shouldBePlayingNow.name;
                 upNextStartTime = shouldBePlayingNow.startTime;
                 const lateBy = currentSecs - shouldBePlayingNow.startSecs;
-                countdown = this.formatCountdown(-lateBy);
+                countdown = formatCountdown(-lateBy);
                 isLateStart = true;
             } else if (!nowPlaying && nextUpcoming) {
                 upNext = nextUpcoming.name;
                 upNextStartTime = nextUpcoming.startTime;
-                countdown = this.formatCountdown(nextUpcoming.startSecs - currentSecs);
+                countdown = formatCountdown(nextUpcoming.startSecs - currentSecs);
                 const secsUntilStart = nextUpcoming.startSecs - currentSecs;
                 startingSoon = secsUntilStart > 0 && secsUntilStart <= 120;
             }
@@ -240,22 +209,6 @@ function stageApp() {
             }
         },
 
-        formatCountdown(seconds) {
-            const isOver = seconds < 0;
-            const absSeconds = Math.abs(seconds);
-            const hrs = Math.floor(absSeconds / 3600);
-            const mins = Math.floor((absSeconds % 3600) / 60);
-            const secs = absSeconds % 60;
-
-            let time;
-            if (hrs > 0) {
-                time = `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-            } else {
-                time = `${mins}:${secs.toString().padStart(2, '0')}`;
-            }
-
-            return isOver ? `+${time}` : time;
-        },
     }
 }
 </script>

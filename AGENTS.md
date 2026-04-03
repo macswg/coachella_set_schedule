@@ -10,8 +10,9 @@
 Code layout:
 - `main.py`: FastAPI app entry point, background Google Sheets polling.
 - `app/`: server-side modules (config, models, slip logic, sheets integration, WebSocket manager, Art-Net listener).
-- `templates/`: Jinja2 templates — `index.html` (main view + Alpine.js app), `components/act_row.html` (per-act partial).
+- `templates/`: Jinja2 templates — `base.html` (shared head with CDN scripts + `schedule_utils.js`), `index.html` (main schedule view + Alpine.js app), `stage.html` (large-format stage display), `components/act_row.html` (per-act partial).
 - `static/styles.css`: dark theme styles.
+- `static/schedule_utils.js`: shared client-side helpers (`timeToSeconds`, `normalizeActTimes`, `formatCountdown`) loaded by `base.html` and used by both `index.html` and `stage.html`.
 
 ## Build, Test, and Development Commands
 

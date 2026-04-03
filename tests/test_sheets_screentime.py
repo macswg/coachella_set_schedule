@@ -15,7 +15,7 @@ class FakeSheet:
             ["header"] * 8,
             ["header"] * 8,
             ["header"] * 8,
-            ["", ONDECK_ACT, "", "14:00", "", "", "", "00:01:30"],
+            ["", "", ONDECK_ACT, "14:00", "", "", "", "00:01:30"],
         ]
 
     def get_all_values(self):
@@ -47,4 +47,4 @@ def test_stop_screentime_accumulates_existing_hhmmss_total():
 
     assert result is not None
     assert result.screentime_total_seconds == 120
-    assert fake_sheet.rows[5][7] == "120"
+    assert fake_sheet.rows[5][7] == "0:02:00"

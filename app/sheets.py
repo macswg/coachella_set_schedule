@@ -98,6 +98,11 @@ def _format_screentime(seconds: int) -> str:
     return f"{hours}:{mins:02d}:{secs:02d}"
 
 
+def _time_to_secs(t: time) -> int:
+    """Convert a time object to seconds since midnight."""
+    return t.hour * 3600 + t.minute * 60 + t.second
+
+
 def _parse_screentime_seconds(value: str) -> int:
     """Parse screentime value which may be an integer, MM:SS, or HH:MM:SS."""
     value = value.strip()
@@ -246,29 +251,27 @@ def stop_screentime(act_name: str) -> Optional[Act]:
     now = datetime.now(tz=ZoneInfo(settings.TIMEZONE)).time()
 
     # Compute elapsed seconds, handle midnight crossing
-    start_secs = session_start.hour * 3600 + session_start.minute * 60 + session_start.second
-    now_secs = now.hour * 3600 + now.minute * 60 + now.second
-    elapsed = now_secs - start_secs
+    elapsed = _time_to_secs(now) - _time_to_secs(session_start)
     if elapsed < 0:
         elapsed += 86400
 
     print(f"[screentime] stop {act_name!r}: start={session_start} now={now} elapsed={elapsed}s")
 
     sheet = _get_sheet()
-    row_num = _find_row(act_name)
+    # Single sheet read: find row number and current total simultaneously
+    all_values = sheet.get_all_values()
+    data_rows = all_values[HEADER_ROW:]
+    row_num = None
+    current_total = 0
+    for i, row in enumerate(data_rows):
+        if _get_cell(row, COL_ARTIST_NAME) == act_name:
+            row_num = i + HEADER_ROW + 1
+            current_total = _parse_screentime_seconds(_get_cell(row, COL_SCREENTIME_TOTAL))
+            break
 
     if row_num is None:
         print(f"[screentime] row not found for {act_name!r} — sheet write skipped")
         return None
-
-    # Read current total from sheet (treat sheet as authoritative)
-    all_values = sheet.get_all_values()
-    data_rows = all_values[HEADER_ROW:]
-    current_total = 0
-    for row in data_rows:
-        if _get_cell(row, COL_ARTIST_NAME) == act_name:
-            current_total = _parse_screentime_seconds(_get_cell(row, COL_SCREENTIME_TOTAL))
-            break
 
     new_total = current_total + elapsed
     _screentime_totals[act_name] = new_total
@@ -290,19 +293,28 @@ def write_active_screentimes() -> None:
 
     tz = ZoneInfo(settings.TIMEZONE)
     now = datetime.now(tz=tz).time()
-    now_secs = now.hour * 3600 + now.minute * 60 + now.second
+    now_secs = _time_to_secs(now)
     sheet = _get_sheet()
 
+    # Single sheet read; build a name→row_num map for all active sessions
+    all_values = sheet.get_all_values()
+    data_rows = all_values[HEADER_ROW:]
+    active_names = set(_screentime_sessions)
+    row_map: dict[str, int] = {}
+    for i, row in enumerate(data_rows):
+        name = _get_cell(row, COL_ARTIST_NAME)
+        if name in active_names:
+            row_map[name] = i + HEADER_ROW + 1
+
     for act_name, session_start in list(_screentime_sessions.items()):
-        start_secs = session_start.hour * 3600 + session_start.minute * 60 + session_start.second
-        elapsed = now_secs - start_secs
+        elapsed = now_secs - _time_to_secs(session_start)
         if elapsed < 0:
             elapsed += 86400
 
         accumulated = _screentime_totals.get(act_name, 0)
         current_total = accumulated + max(0, elapsed)
 
-        row_num = _find_row(act_name)
+        row_num = row_map.get(act_name)
         if row_num is None:
             print(f"[screentime] Could not find row for {act_name} during periodic write")
             continue

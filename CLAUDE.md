@@ -97,7 +97,8 @@ coachella_set_schedule/
 │   └── components/
 │       └── act_row.html # Single act row partial
 ├── static/
-│   └── styles.css       # Dark theme styles
+│   ├── styles.css           # Dark theme styles
+│   └── schedule_utils.js    # Shared JS helpers: timeToSeconds, normalizeActTimes, formatCountdown
 └── tests/
     ├── test_models.py        # Act model unit tests
     ├── test_slip.py          # Slip calculation unit tests

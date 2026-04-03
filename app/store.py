@@ -58,10 +58,26 @@ _schedule: list[Act] = [
     ),
 ]
 
-STAGE_NAME = "Main Stage"
-
 # In-memory screentime session tracking (survives schedule list rebuilds)
 _screentime_sessions: dict[str, time] = {}
+
+
+def _find_act_index(act_name: str) -> Optional[int]:
+    """Return the index of an act in _schedule, or None if not found."""
+    for i, act in enumerate(_schedule):
+        if act.act_name == act_name:
+            return i
+    return None
+
+
+def _elapsed_seconds(session_start: time, now: time) -> int:
+    """Compute elapsed seconds between two times, handling midnight crossing."""
+    start_secs = session_start.hour * 3600 + session_start.minute * 60 + session_start.second
+    now_secs = now.hour * 3600 + now.minute * 60 + now.second
+    elapsed = now_secs - start_secs
+    if elapsed < 0:
+        elapsed += 86400
+    return elapsed
 
 
 def get_schedule() -> list[Act]:
@@ -71,54 +87,52 @@ def get_schedule() -> list[Act]:
 
 def get_act(act_name: str) -> Optional[Act]:
     """Get a single act by name."""
-    for act in _schedule:
-        if act.act_name == act_name:
-            return act
-    return None
+    i = _find_act_index(act_name)
+    return _schedule[i] if i is not None else None
 
 
 def update_actual_start(act_name: str, actual_time: time) -> Optional[Act]:
     """Update the actual start time for an act."""
-    for i, act in enumerate(_schedule):
-        if act.act_name == act_name:
-            _schedule[i] = act.model_copy(update={"actual_start": actual_time})
-            return _schedule[i]
-    return None
+    i = _find_act_index(act_name)
+    if i is None:
+        return None
+    _schedule[i] = _schedule[i].model_copy(update={"actual_start": actual_time})
+    return _schedule[i]
 
 
 def update_actual_end(act_name: str, actual_time: time) -> Optional[Act]:
     """Update the actual end time for an act."""
-    for i, act in enumerate(_schedule):
-        if act.act_name == act_name:
-            _schedule[i] = act.model_copy(update={"actual_end": actual_time})
-            return _schedule[i]
-    return None
+    i = _find_act_index(act_name)
+    if i is None:
+        return None
+    _schedule[i] = _schedule[i].model_copy(update={"actual_end": actual_time})
+    return _schedule[i]
 
 
 def clear_actual_times(act_name: str) -> Optional[Act]:
     """Clear both actual start and end times for an act."""
-    for i, act in enumerate(_schedule):
-        if act.act_name == act_name:
-            _schedule[i] = act.model_copy(update={
-                "actual_start": None,
-                "actual_end": None,
-                "screentime_total_seconds": 0,
-                "screentime_session_start": None,
-            })
-            _screentime_sessions.pop(act_name, None)
-            return _schedule[i]
-    return None
+    i = _find_act_index(act_name)
+    if i is None:
+        return None
+    _schedule[i] = _schedule[i].model_copy(update={
+        "actual_start": None,
+        "actual_end": None,
+        "screentime_total_seconds": 0,
+        "screentime_session_start": None,
+    })
+    _screentime_sessions.pop(act_name, None)
+    return _schedule[i]
 
 
 def start_screentime(act_name: str) -> Optional[Act]:
     """Start a screentime session for an act."""
     session_start = datetime.now(tz=ZoneInfo(settings.TIMEZONE)).time()
     _screentime_sessions[act_name] = session_start
-    for i, act in enumerate(_schedule):
-        if act.act_name == act_name:
-            _schedule[i] = act.model_copy(update={"screentime_session_start": session_start})
-            return _schedule[i]
-    return None
+    i = _find_act_index(act_name)
+    if i is None:
+        return None
+    _schedule[i] = _schedule[i].model_copy(update={"screentime_session_start": session_start})
+    return _schedule[i]
 
 
 def stop_screentime(act_name: str) -> Optional[Act]:
@@ -128,23 +142,17 @@ def stop_screentime(act_name: str) -> Optional[Act]:
 
     session_start = _screentime_sessions.pop(act_name)
     now = datetime.now(tz=ZoneInfo(settings.TIMEZONE)).time()
+    elapsed = _elapsed_seconds(session_start, now)
 
-    # Compute elapsed seconds, handle midnight crossing
-    start_secs = session_start.hour * 3600 + session_start.minute * 60 + session_start.second
-    now_secs = now.hour * 3600 + now.minute * 60 + now.second
-    elapsed = now_secs - start_secs
-    if elapsed < 0:
-        elapsed += 86400
-
-    for i, act in enumerate(_schedule):
-        if act.act_name == act_name:
-            new_total = act.screentime_total_seconds + elapsed
-            _schedule[i] = act.model_copy(update={
-                "screentime_total_seconds": new_total,
-                "screentime_session_start": None,
-            })
-            return _schedule[i]
-    return None
+    i = _find_act_index(act_name)
+    if i is None:
+        return None
+    new_total = _schedule[i].screentime_total_seconds + elapsed
+    _schedule[i] = _schedule[i].model_copy(update={
+        "screentime_total_seconds": new_total,
+        "screentime_session_start": None,
+    })
+    return _schedule[i]
 
 
 def write_active_screentimes() -> None:
@@ -154,4 +162,4 @@ def write_active_screentimes() -> None:
 
 def get_stage_name() -> str:
     """Get the stage name."""
-    return STAGE_NAME
+    return settings.STAGE_NAME

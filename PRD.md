@@ -150,11 +150,14 @@ No Node.js or build step required. Run with single command: `uvicorn main:app`
 | Data sync | Google Sheets API (live sync) |
 
 ## Google Sheet Schema
-| Column | Description |
-|--------|-------------|
-| `act_name` | Artist/act name |
-| `scheduled_start` | Published start time (e.g., `14:30`) |
-| `scheduled_end` | Published end time |
-| `actual_start` | Recorded start time (filled by app during live operation) |
-| `actual_end` | Recorded end time (filled by app during live operation) |
-| `notes` | Optional notes field |
+
+Header row is at row 5; data starts at row 6. The app reads by column position (not header names).
+
+| Column | Field | Description |
+|--------|-------|-------------|
+| C | `act_name` | Artist/act name |
+| D | `scheduled_start` | Published start time (e.g., `14:30`) |
+| E | `scheduled_end` | Published end time |
+| F | `actual_start` | Recorded start time (filled by app during live operation) |
+| G | `actual_end` | Recorded end time (filled by app during live operation) |
+| H | `screentime_total` | On Deck screentime written as `H:MM:SS` (filled by app) |

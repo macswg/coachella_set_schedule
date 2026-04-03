@@ -158,7 +158,7 @@ All settings via environment variables (`.env` file). See `.env.example` for the
 
 | Column | Content |
 |--------|---------|
-| B | Artist name |
+| C | Artist name |
 | D | Scheduled start (e.g. `14:30`) |
 | E | Scheduled end |
 | F | Actual time on (written by app) |
@@ -224,7 +224,8 @@ coachella_set_schedule/
 │   └── components/
 │       └── act_row.html # Single act row partial
 ├── static/
-│   └── styles.css       # Dark theme styles
+│   ├── styles.css           # Dark theme styles
+│   └── schedule_utils.js    # Shared JS helpers loaded by base.html (timeToSeconds, normalizeActTimes, formatCountdown)
 └── tests/
     ├── test_models.py         # Act model unit tests
     ├── test_slip.py           # Slip calculation unit tests

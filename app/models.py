@@ -27,28 +27,39 @@ class Act(BaseModel):
         """Returns True if this is an on-deck row (screentime buttons only)."""
         return 'on deck' in self.act_name.lower() or 'stage time' in self.act_name.lower()
 
+    @staticmethod
+    def _duration_seconds(start: time, end: time) -> int:
+        """Elapsed seconds from start to end, handling midnight crossover."""
+        start_dt = datetime.combine(datetime.today(), start)
+        end_dt = datetime.combine(datetime.today(), end)
+        if end_dt < start_dt:
+            end_dt += timedelta(days=1)
+        return int((end_dt - start_dt).total_seconds())
+
+    @staticmethod
+    def _variance_seconds(scheduled: time, actual: time) -> int:
+        """Signed seconds between scheduled and actual time (positive = late),
+        handling midnight crossover."""
+        scheduled_dt = datetime.combine(datetime.today(), scheduled)
+        actual_dt = datetime.combine(datetime.today(), actual)
+        if actual_dt < scheduled_dt - timedelta(hours=12):
+            actual_dt += timedelta(days=1)
+        return int((actual_dt - scheduled_dt).total_seconds())
+
     @computed_field
     @property
     def scheduled_duration(self) -> int:
         """Scheduled duration in seconds."""
         if self.scheduled_end is None:
             return 0
-        start_dt = datetime.combine(datetime.today(), self.scheduled_start)
-        end_dt = datetime.combine(datetime.today(), self.scheduled_end)
-        if end_dt < start_dt:
-            end_dt += timedelta(days=1)
-        return int((end_dt - start_dt).total_seconds())
+        return self._duration_seconds(self.scheduled_start, self.scheduled_end)
 
     @computed_field
     @property
     def actual_duration(self) -> Optional[int]:
         """Actual duration in seconds, if both start and end are recorded."""
         if self.actual_start and self.actual_end:
-            start_dt = datetime.combine(datetime.today(), self.actual_start)
-            end_dt = datetime.combine(datetime.today(), self.actual_end)
-            if end_dt < start_dt:
-                end_dt += timedelta(days=1)
-            return int((end_dt - start_dt).total_seconds())
+            return self._duration_seconds(self.actual_start, self.actual_end)
         return None
 
     @computed_field
@@ -56,11 +67,7 @@ class Act(BaseModel):
     def start_variance(self) -> Optional[int]:
         """Variance in seconds from scheduled start (positive = late)."""
         if self.actual_start:
-            scheduled_dt = datetime.combine(datetime.today(), self.scheduled_start)
-            actual_dt = datetime.combine(datetime.today(), self.actual_start)
-            if actual_dt < scheduled_dt - timedelta(hours=12):
-                actual_dt += timedelta(days=1)
-            return int((actual_dt - scheduled_dt).total_seconds())
+            return self._variance_seconds(self.scheduled_start, self.actual_start)
         return None
 
     @computed_field
@@ -68,11 +75,7 @@ class Act(BaseModel):
     def end_variance(self) -> Optional[int]:
         """Variance in seconds from scheduled end (positive = late)."""
         if self.actual_end and self.scheduled_end:
-            scheduled_dt = datetime.combine(datetime.today(), self.scheduled_end)
-            actual_dt = datetime.combine(datetime.today(), self.actual_end)
-            if actual_dt < scheduled_dt - timedelta(hours=12):
-                actual_dt += timedelta(days=1)
-            return int((actual_dt - scheduled_dt).total_seconds())
+            return self._variance_seconds(self.scheduled_end, self.actual_end)
         return None
 
     def is_complete(self) -> bool:

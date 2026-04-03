@@ -23,7 +23,7 @@ class FakeSheet:
             ["header"] * 8,
             ["header"] * 8,
             ["header"] * 8,
-            ["", ONDECK_ACT, "", "14:00", "15:00", "", "", initial_screentime],
+            ["", "", ONDECK_ACT, "14:00", "15:00", "", "", initial_screentime],
         ]
 
     def get_all_values(self):
