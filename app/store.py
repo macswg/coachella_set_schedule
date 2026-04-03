@@ -163,3 +163,18 @@ def write_active_screentimes() -> None:
 def get_stage_name() -> str:
     """Get the stage name."""
     return settings.STAGE_NAME
+
+
+def get_current_show() -> str:
+    """No multi-show support in mock store."""
+    return ""
+
+
+def has_next_show() -> bool:
+    """No multi-show support in mock store."""
+    return False
+
+
+def get_next_show() -> str:
+    """No multi-show support in mock store."""
+    return ""

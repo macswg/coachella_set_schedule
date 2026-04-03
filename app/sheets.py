@@ -38,6 +38,13 @@ HEADER_ROW = 5  # Header is on row 5, data starts row 6
 _client: Optional[gspread.Client] = None
 _sheet: Optional[gspread.Worksheet] = None
 
+# Multi-show state: ordered list of tabs and current position
+_show_tabs: list[str] = settings.SHOW_TABS if settings.SHOW_TABS else ([settings.GOOGLE_SHEET_TAB] if settings.GOOGLE_SHEET_TAB else [])
+_active_tab_index: int = 0
+
+# Row number cache: act_name → 1-indexed sheet row. Rebuilt on every get_schedule() call.
+_row_cache: dict[str, int] = {}
+
 # In-memory screentime tracking (survives schedule list rebuilds)
 _screentime_sessions: dict[str, time] = {}
 _screentime_totals: dict[str, int] = {}  # Cache new totals so post-write reads aren't stale
@@ -54,8 +61,9 @@ def _get_sheet() -> gspread.Worksheet:
         )
         _client = gspread.authorize(creds)
         spreadsheet = _client.open_by_key(settings.GOOGLE_SHEETS_ID)
-        if settings.GOOGLE_SHEET_TAB:
-            _sheet = spreadsheet.worksheet(settings.GOOGLE_SHEET_TAB)
+        active_tab = _show_tabs[_active_tab_index] if _show_tabs else None
+        if active_tab:
+            _sheet = spreadsheet.worksheet(active_tab)
         else:
             _sheet = spreadsheet.sheet1
 
@@ -128,10 +136,18 @@ def _parse_screentime_seconds(value: str) -> int:
 
 def get_schedule() -> list[Act]:
     """Fetch all acts from the Google Sheet."""
+    global _row_cache
     sheet = _get_sheet()
     # Get all values starting from the data row (after header)
     all_values = sheet.get_all_values()
     data_rows = all_values[HEADER_ROW:]  # Skip header rows (0-indexed, so row 6 = index 5)
+
+    # Rebuild row number cache from this read
+    _row_cache = {
+        _get_cell(row, COL_ARTIST_NAME): i + HEADER_ROW + 1
+        for i, row in enumerate(data_rows)
+        if _get_cell(row, COL_ARTIST_NAME)
+    }
 
     acts = []
     for row in data_rows:
@@ -158,7 +174,6 @@ def get_schedule() -> list[Act]:
             scheduled_end=scheduled_end,
             actual_start=_parse_time(_get_cell(row, COL_ACTUAL_START)),
             actual_end=_parse_time(_get_cell(row, COL_ACTUAL_END)),
-            notes=None,
             screentime_total_seconds=screentime_total,
             screentime_session_start=_screentime_sessions.get(act_name),
         )
@@ -177,16 +192,8 @@ def get_act(act_name: str) -> Optional[Act]:
 
 
 def _find_row(act_name: str) -> Optional[int]:
-    """Find the row number for an act (1-indexed, accounting for header on row 5)."""
-    sheet = _get_sheet()
-    all_values = sheet.get_all_values()
-    data_rows = all_values[HEADER_ROW:]  # Skip header rows
-
-    for i, row in enumerate(data_rows):
-        if _get_cell(row, COL_ARTIST_NAME) == act_name:
-            return i + HEADER_ROW + 1  # Convert back to 1-indexed sheet row
-
-    return None
+    """Find the row number for an act using the cached row map."""
+    return _row_cache.get(act_name)
 
 
 def update_actual_start(act_name: str, actual_time: time) -> Optional[Act]:
@@ -327,3 +334,35 @@ def write_active_screentimes() -> None:
 def get_stage_name() -> str:
     """Get the stage name from config."""
     return settings.STAGE_NAME
+
+
+def get_current_show() -> str:
+    """Return the active tab name, or empty string in single-show mode."""
+    return _show_tabs[_active_tab_index] if _show_tabs else ""
+
+
+def has_next_show() -> bool:
+    """Return True if there is a next show tab to advance to."""
+    return len(_show_tabs) > 1 and _active_tab_index < len(_show_tabs) - 1
+
+
+def get_next_show() -> str:
+    """Return the next show tab name, or empty string if on the last show."""
+    if has_next_show():
+        return _show_tabs[_active_tab_index + 1]
+    return ""
+
+
+def advance_show() -> str:
+    """Advance to the next show tab and reset all per-show state. Returns the new tab name."""
+    global _active_tab_index, _sheet, _row_cache, _screentime_sessions, _screentime_totals
+    if not has_next_show():
+        raise ValueError("Already on the last show")
+    _active_tab_index += 1
+    _sheet = None  # Force _get_sheet() to reconnect to the new tab
+    _row_cache = {}
+    _screentime_sessions = {}
+    _screentime_totals = {}
+    new_tab = _show_tabs[_active_tab_index]
+    print(f"[show] Advanced to tab: {new_tab!r}")
+    return new_tab

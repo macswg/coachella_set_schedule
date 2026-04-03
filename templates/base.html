@@ -15,5 +15,14 @@
 </head>
 <body>
     {% block content %}{% endblock %}
+    <script>
+        document.body.addEventListener('htmx:wsBeforeMessage', function(event) {
+            try {
+                if (JSON.parse(event.detail.message).type === 'reload') {
+                    window.location.reload();
+                }
+            } catch (e) {}
+        });
+    </script>
 </body>
 </html>

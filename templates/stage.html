@@ -18,7 +18,9 @@
             <div class="stage-tod-label-text">Current Time:</div>
             <div class="current-time" x-text="currentTime"></div>
         </div>
-        <div class="header-right"></div>
+        <div class="header-right">
+            <button id="fullscreen-btn" onclick="toggleFullscreen()" title="Enter fullscreen" style="background:none;border:1px solid #555;color:#aaa;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:0.85rem;">⛶ Fullscreen</button>
+        </div>
     </header>
 
     <!-- Now Playing / Up Next card — same structure as main display -->
@@ -211,5 +213,18 @@ function stageApp() {
 
     }
 }
+
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+    } else {
+        document.exitFullscreen();
+    }
+}
+
+document.addEventListener('fullscreenchange', () => {
+    const btn = document.getElementById('fullscreen-btn');
+    if (btn) btn.style.display = document.fullscreenElement ? 'none' : '';
+});
 </script>
 {% endblock %}

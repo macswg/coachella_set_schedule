@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.config import settings
+from app import triggers as trigger_engine
 
 if settings.USE_GOOGLE_SHEETS:
     from app import sheets as store
@@ -34,6 +35,14 @@ async def poll_schedule():
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
         try:
             store.write_active_screentimes()
+            acts = store.get_schedule()
+
+            if trigger_engine.is_enabled():
+                newly_triggered = trigger_engine.check_and_fire(acts)
+                completed_cleared = trigger_engine.clear_completed(acts)
+                if newly_triggered or completed_cleared:
+                    await manager.broadcast_recording_state(trigger_engine.get_active_reminders(), trigger_engine.is_enabled())
+
             await broadcast_schedule_update()
         except Exception as e:
             print(f"Error polling schedule: {e}")
@@ -94,7 +103,10 @@ def get_template_context(request: Request = None) -> dict:
         "acts": acts,
         "slip": slip,
         "format_variance": format_variance,
-        "sheet_tab": settings.GOOGLE_SHEET_TAB if settings.USE_GOOGLE_SHEETS else None,
+        "sheet_tab": store.get_current_show() if settings.USE_GOOGLE_SHEETS else None,
+        "has_next_show": store.has_next_show(),
+        "current_show": store.get_current_show(),
+        "next_show": store.get_next_show(),
     }
 
 
@@ -271,11 +283,53 @@ async def websocket_endpoint(websocket: WebSocket, mode: str = "view"):
 
 
 
-# Reset endpoint for testing
+@app.post("/api/show/advance")
+async def advance_show():
+    """Advance to the next show tab. Broadcasts a reload to all connected clients."""
+    if not settings.USE_GOOGLE_SHEETS:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Multi-show switching requires Google Sheets")
+    if not store.has_next_show():
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Already on the last show")
+    store.advance_show()
+    await broadcast_schedule_update()
+    await manager.broadcast_reload()
+    return {"status": "ok", "tab": store.get_current_show()}
+
+
+@app.post("/api/recording/toggle")
+async def recording_toggle():
+    """Toggle recording triggers on/off at runtime."""
+    trigger_engine.set_enabled(not trigger_engine.is_enabled())
+    await manager.broadcast_recording_state(trigger_engine.get_active_reminders(), trigger_engine.is_enabled())
+    return {"enabled": trigger_engine.is_enabled()}
+
+
+@app.post("/acts/{act_name}/recording/stop")
+async def recording_stop(act_name: str):
+    """Operator-initiated stop: calls stop_recording() and clears the reminder."""
+    act_name = unquote(act_name)
+    trigger_engine.stop_and_dismiss(act_name)
+    await manager.broadcast_recording_state(trigger_engine.get_active_reminders(), trigger_engine.is_enabled())
+    return {"status": "ok"}
+
+
+@app.post("/acts/{act_name}/recording/dismiss")
+async def recording_dismiss(act_name: str):
+    """Dismiss the recording reminder without calling stop_recording()."""
+    act_name = unquote(act_name)
+    trigger_engine.dismiss(act_name)
+    await manager.broadcast_recording_state(trigger_engine.get_active_reminders(), trigger_engine.is_enabled())
+    return {"status": "ok"}
+
 
 @app.post("/api/reset")
 async def reset_data():
-    """Reset all actual times to None (testing only)"""
+    """Reset all actual times to None (testing only, disabled when USE_GOOGLE_SHEETS=true)."""
+    if settings.USE_GOOGLE_SHEETS:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Reset not allowed in production mode")
     acts = store.get_schedule()
     for act in acts:
         store.clear_actual_times(act.act_name)

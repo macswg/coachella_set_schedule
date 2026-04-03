@@ -1049,3 +1049,116 @@ body {
 .stage-np-section.stage-np-compact .np-suffix { font-size: 0.9vw; }
 .stage-np-section.stage-np-compact .stage-start-time { font-size: 1.5vw; }
 .stage-np-section.stage-np-compact .stage-start-time-value { font-size: 3vw; }
+
+/* Advance to Next Show Button */
+.btn-advance-show {
+    background: #7a5500;
+    color: #ffc107;
+    border: 1px solid #ffc107;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.btn-advance-show:hover {
+    background: #996800;
+}
+
+/* Recording Toggle Button */
+.btn-recording-toggle {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.recording-toggle-on {
+    background: #1a6b1a;
+    color: #44ff44;
+    border: 1px solid #44ff44;
+}
+
+.recording-toggle-on:hover {
+    background: #226622;
+}
+
+.recording-toggle-off {
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+}
+
+.recording-toggle-off:hover {
+    background: var(--border-color);
+    color: var(--text-secondary);
+}
+
+/* Recording Banners (edit page only) */
+.recording-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, rgba(220, 20, 20, 0.2) 0%, rgba(180, 0, 0, 0.12) 100%);
+    border: 1px solid rgba(255, 60, 60, 0.5);
+    border-radius: 10px;
+    margin-bottom: 12px;
+}
+
+.recording-banner-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #ff3333;
+    box-shadow: 0 0 8px #ff3333;
+    flex-shrink: 0;
+    animation: pulse 1.5s infinite;
+}
+
+.recording-banner-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: #ff5555;
+    text-transform: uppercase;
+}
+
+.recording-banner-act {
+    flex: 1;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.recording-banner-btn {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.recording-stop-btn {
+    background-color: #ff3333;
+    color: white;
+}
+
+.recording-stop-btn:hover {
+    background-color: #ff5555;
+}
+
+.recording-dismiss-btn {
+    background-color: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.recording-dismiss-btn:hover {
+    background-color: var(--border-color);
+    color: var(--text-primary);
+}

@@ -11,7 +11,6 @@ class Act(BaseModel):
     scheduled_end: Optional[time] = None
     actual_start: Optional[time] = None
     actual_end: Optional[time] = None
-    notes: Optional[str] = None
     screentime_total_seconds: int = 0
     screentime_session_start: Optional[time] = None
 
@@ -26,6 +25,12 @@ class Act(BaseModel):
     def is_ondeck(self) -> bool:
         """Returns True if this is an on-deck row (screentime buttons only)."""
         return 'on deck' in self.act_name.lower() or 'stage time' in self.act_name.lower()
+
+    @computed_field
+    @property
+    def is_changeover(self) -> bool:
+        """Returns True if this is a changeover row (no recording trigger)."""
+        return 'changeover' in self.act_name.lower()
 
     @staticmethod
     def _duration_seconds(start: time, end: time) -> int:
@@ -90,9 +95,3 @@ class Act(BaseModel):
         """Returns True if the act hasn't started yet."""
         return self.actual_start is None
 
-
-class Schedule(BaseModel):
-    """Represents the full schedule for a stage."""
-
-    stage_name: str
-    acts: list[Act]

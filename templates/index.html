@@ -41,6 +41,11 @@
         </div>
     </header>
 
+    {% if not view_only %}
+    <!-- Recording Reminders (edit page only) -->
+    <div id="recording-banners"></div>
+    {% endif %}
+
     <!-- Now Playing / Up Next Section (hidden on Chrome iOS due to scroll bug) -->
     <section class="now-playing-section" id="now-playing-section"></section>
 
@@ -53,6 +58,16 @@
 	    {% if not view_only %}
             <button class="btn-reset-all" @click="confirmMessage = 'Reset all actual times? This will clear all recorded start and end times.'; confirmUrl = '/api/reset'">
                 Reset All Times
+            </button>
+            {% if has_next_show %}
+            <button class="btn-advance-show" @click="confirmMessage = 'Advance to {{ next_show }}? This will reload all connected clients. This cannot be undone.'; confirmUrl = '/api/show/advance'">
+                Advance to Next Show
+            </button>
+            {% endif %}
+            <button class="btn-recording-toggle"
+                    :class="recordingEnabled ? 'recording-toggle-on' : 'recording-toggle-off'"
+                    @click="fetch('/api/recording/toggle', {method:'POST'})">
+                <span x-text="recordingEnabled ? 'Record Triggers: ON' : 'Record Triggers: OFF'"></span>
             </button>
             {% endif %}
 	    <button class="btn-toggle-completed" @click="hideCompleted = !hideCompleted">
@@ -84,6 +99,7 @@ function scheduleApp() {
         currentTime: '',
         slip: {{ slip }},
         brightness: 0,
+        recordingEnabled: false,
         timeOverride: '',
         frozenTime: null,
         nextDay: false,
@@ -128,11 +144,34 @@ function scheduleApp() {
                     if (data.type === 'brightness') {
                         self.brightness = data.value;
                         event.preventDefault();
+                    } else if (data.type === 'recording') {
+                        self.recordingEnabled = data.enabled;
+                        self.updateRecordingBanners(data.active);
+                        event.preventDefault();
                     }
                 } catch (e) {
                     // Not JSON, let HTMX handle it as HTML
                 }
             });
+        },
+
+        updateRecordingBanners(activeActNames) {
+            const container = document.getElementById('recording-banners');
+            if (!container) return;
+            container.innerHTML = activeActNames.map(name => `
+                <div class="recording-banner">
+                    <span class="recording-banner-dot"></span>
+                    <span class="recording-banner-label">REC</span>
+                    <span class="recording-banner-act">${name}</span>
+                    <button class="recording-banner-btn recording-stop-btn"
+                            onclick="fetch('/acts/${encodeURIComponent(name)}/recording/stop', {method:'POST'})">
+                        Stop Recording
+                    </button>
+                    <button class="recording-banner-btn recording-dismiss-btn"
+                            onclick="fetch('/acts/${encodeURIComponent(name)}/recording/dismiss', {method:'POST'})">
+                        Dismiss
+                    </button>
+                </div>`).join('');
         },
 
         updateTime() {

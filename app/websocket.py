@@ -46,6 +46,18 @@ class ConnectionManager:
         self.current_brightness = value
         await self.broadcast(json.dumps({"type": "brightness", "value": value}))
 
+    async def broadcast_to_editors(self, message: str):
+        """Send a message to editor clients only."""
+        await self._send_to_all(lambda c, is_editor: message if is_editor else None)
+
+    async def broadcast_reload(self):
+        """Tell all connected clients to reload the page."""
+        await self.broadcast(json.dumps({"type": "reload"}))
+
+    async def broadcast_recording_state(self, active_reminders: list[str], enabled: bool):
+        """Send current recording reminder state to editor clients only."""
+        await self.broadcast_to_editors(json.dumps({"type": "recording", "active": active_reminders, "enabled": enabled}))
+
 
 # Global connection manager instance
 manager = ConnectionManager()
