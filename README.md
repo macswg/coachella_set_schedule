@@ -17,7 +17,7 @@ Real-time schedule tracking for festival stages. Operators record actual start/e
 - **Hide/show completed acts** toggle
 - **Time override** for testing — freeze the clock at a specific time via `/preview`
 - **Mobile-friendly dark theme** optimized for outdoor use
-- **Docker support**
+- **Docker support** with dev auto-reload mode
 
 
 
@@ -95,10 +95,13 @@ cp .env.example .env
 # Docker Compose (recommended)
 docker compose up --build
 
-# Development (with auto-reload)
+# Docker Compose — dev mode (auto-reload on file changes)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+# Development without Docker (auto-reload)
 venv/bin/uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
-# Production
+# Production without Docker
 venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
@@ -207,7 +210,8 @@ coachella_set_schedule/
 ├── main.py              # FastAPI app, routes, WebSocket, background polling
 ├── requirements.txt     # Python dependencies
 ├── Dockerfile           # Docker configuration
-├── docker-compose.yml   # Docker Compose configuration
+├── docker-compose.yml       # Docker Compose configuration
+├── docker-compose.dev.yml   # Dev override: volume mount + auto-reload
 ├── .env.example         # Environment variables template
 ├── app/
 │   ├── config.py        # Settings from environment

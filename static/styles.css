@@ -909,8 +909,22 @@ body {
     display: flex;
     flex-direction: column;
     padding: 20px;
-    gap: 20px;
+    gap: 8px;
     background-color: var(--bg-primary);
+}
+
+.stage-display .stage-header {
+    margin-bottom: 0;
+}
+
+.stage-display .stage-header .header-left,
+.stage-display .stage-header .header-right {
+    flex: 1;
+}
+
+.stage-display .stage-header .header-right {
+    display: flex;
+    justify-content: flex-end;
 }
 
 .stage-header .header-center {
@@ -925,7 +939,7 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.15em;
     color: var(--text-secondary);
-    line-height: 1;
+    line-height: 1.1;
 }
 
 .stage-display .stage-header h1 {
@@ -934,7 +948,7 @@ body {
 
 .stage-display .current-time {
     font-size: 8vw;
-    line-height: 1;
+    line-height: 1.1;
 }
 
 /* Now-playing card sizes to its content */
@@ -950,33 +964,40 @@ body {
 .stage-np-section .up-next {
     width: 100%;
     margin: 0;
+    gap: 2px;
 }
 
 .stage-display .np-label {
     font-size: 1.5vw;
+    line-height: 1.1;
 }
 
 .stage-display .np-artist {
-    font-size: 6vw;
+    font-size: 9vw;
+    line-height: 1.1;
 }
 
 .stage-display .np-countdown {
     font-size: 8vw;
+    line-height: 1.1;
 }
 
 .stage-display .np-suffix {
     font-size: 1.5vw;
+    line-height: 1.1;
 }
 
 .stage-start-time {
-    font-size: 3vw;
+    font-size: 4vw;
     color: var(--text-primary);
+    line-height: 1.1;
 }
 
 .stage-start-time-value {
-    font-size: 6vw;
+    font-size: 13vw;
     font-variant-numeric: tabular-nums;
     font-weight: 700;
+    line-height: 1.1;
 }
 
 .stage-start-time-label {
