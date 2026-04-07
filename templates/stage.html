@@ -193,7 +193,7 @@ function stageApp() {
                     section.innerHTML = `
                         <div class="${cl}${startingSoon ? ' starting-soon' : ''}">
                             ${isChangeover ? '<span class="np-changeover">CHANGEOVER</span>' : ''}
-                            <span class="np-label">${isLateStart ? 'Should Be On' : 'Up Next'}</span>
+                            ${(!isChangeover || isLateStart) ? `<span class="np-label">${isLateStart ? 'Should Be On' : 'Up Next'}</span>` : ''}
                             <span class="np-artist">${upNext}</span>
                             <span class="stage-start-time"><span class="stage-start-time-label">Scheduled Start:</span> <span class="stage-start-time-value">${upNextStartTime}</span></span>
                             <div class="np-countdown-wrap">

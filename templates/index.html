@@ -379,7 +379,7 @@ function scheduleApp() {
                     section.innerHTML = `
                         <div class="${cl}${startingSoon ? ' starting-soon' : ''}">
                             ${isChangeover ? '<span class="np-changeover">CHANGEOVER</span>' : ''}
-                            <span class="np-label">${isLateStart ? lateLabel : 'Up Next'}</span>
+                            ${(!isChangeover || isLateStart) ? `<span class="np-label">${isLateStart ? lateLabel : 'Up Next'}</span>` : ''}
                             <span class="np-artist">${upNext}</span>
                             <div class="np-countdown-wrap">
                                 <span class="np-countdown${isLateStart ? ' late-start' : ''}">${countdown}</span>
