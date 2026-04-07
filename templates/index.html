@@ -107,10 +107,26 @@ function scheduleApp() {
         confirmUrl: '',
         hideCompleted: true,
         serverOnline: false,
+        clockOffsetMs: 0,
+
+        async syncClock() {
+            try {
+                const before = Date.now();
+                const res = await fetch('/api/time');
+                const after = Date.now();
+                const { epoch_ms } = await res.json();
+                // Use midpoint of request to estimate server time at this moment
+                const clientMidpoint = Math.round((before + after) / 2);
+                this.clockOffsetMs = epoch_ms - clientMidpoint;
+            } catch (e) {
+                console.warn('Clock sync failed:', e);
+            }
+        },
 
         init() {
-            this.updateTime();
+            this.syncClock().then(() => this.updateTime());
             setInterval(() => this.updateTime(), 1000);
+            setInterval(() => this.syncClock(), 60000);
             this.fetchBrightness();
             this.setupBrightnessListener();
             document.body.addEventListener('htmx:wsAfterMessage', () => this.updateTime());
@@ -178,12 +194,13 @@ function scheduleApp() {
             if (this.frozenTime) {
                 this.currentTime = this.frozenTime;
             } else {
-                const now = new Date();
+                const now = new Date(Date.now() + this.clockOffsetMs);
                 this.currentTime = now.toLocaleTimeString('en-US', {
                     hour: '2-digit',
                     minute: '2-digit',
                     second: '2-digit',
-                    hour12: false
+                    hour12: false,
+                    timeZone: '{{ timezone }}'
                 });
             }
 
@@ -252,7 +269,12 @@ function scheduleApp() {
 
             for (const act of acts) {
                 if (act.isLoadIn || act.isOnDeck) continue;
-                act.row.classList.remove('flash-warning', 'flash-danger', 'act-live', 'act-live-ending');
+                act.row.classList.remove('flash-warning', 'flash-danger', 'act-live', 'act-live-ending', 'act-missed');
+
+                if (!act.hasActualStart && !act.hasActualEnd && currentSecs >= act.scheduledEnd) {
+                    act.row.classList.add('act-missed');
+                    continue;
+                }
 
                 if (!startingSoon && !act.hasActualStart && currentSecs >= act.scheduledStart - fiveMin && currentSecs < act.scheduledEnd) {
                     act.row.classList.add('flash-warning');
@@ -277,9 +299,12 @@ function scheduleApp() {
             let countdown = '';
             let isOvertime = false;
             let isLateStart = false;
+            let isChangeover = false;
+            let isPreshow = false;
 
             let shouldBePlayingNow = null;
             let nextUpcoming = null;
+            let seenAnyAct = false;
 
             for (const act of acts) {
                 if (act.isLoadIn || act.isOnDeck) continue;
@@ -293,15 +318,17 @@ function scheduleApp() {
                     break;
                 }
 
-                if (act.hasActualEnd) continue;
+                if (act.hasActualEnd) { seenAnyAct = true; continue; }
 
                 if (!act.hasActualStart && currentSecs >= act.scheduledStart && currentSecs < act.scheduledEnd) {
-                    shouldBePlayingNow = { name: actName, startSecs: act.scheduledStart, endSecs: act.scheduledEnd };
+                    shouldBePlayingNow = { name: actName, startSecs: act.scheduledStart, endSecs: act.scheduledEnd, isChangeover: seenAnyAct, isPreshow: actName.includes('Preshow') };
                 }
 
                 if (!act.hasActualStart && currentSecs < act.scheduledStart && !nextUpcoming) {
-                    nextUpcoming = { name: actName, startSecs: act.scheduledStart };
+                    nextUpcoming = { name: actName, startSecs: act.scheduledStart, isChangeover: seenAnyAct };
                 }
+
+                seenAnyAct = true;
             }
 
             let startingSoon = false;
@@ -310,10 +337,13 @@ function scheduleApp() {
                 const lateBy = currentSecs - shouldBePlayingNow.startSecs;
                 countdown = formatCountdown(-lateBy);
                 isLateStart = true;
+                isChangeover = shouldBePlayingNow.isChangeover;
+                isPreshow = shouldBePlayingNow.isPreshow;
             } else if (!nowPlaying && nextUpcoming) {
                 upNext = nextUpcoming.name;
                 countdown = formatCountdown(nextUpcoming.startSecs - currentSecs);
                 isLateStart = false;
+                isChangeover = nextUpcoming.isChangeover;
                 const secsUntilStart = nextUpcoming.startSecs - currentSecs;
                 startingSoon = secsUntilStart > 0 && secsUntilStart <= 120;
             }
@@ -339,15 +369,17 @@ function scheduleApp() {
                         </div>`;
                 }
             } else if (upNext) {
-                const cl = `up-next${isLateStart ? ' is-late-start' : ''}`;
-                if (existingDiv?.classList.contains('up-next') && existingDiv.querySelector('.np-artist')?.textContent === upNext && existingDiv.classList.contains('is-late-start') === isLateStart) {
+                const cl = `up-next${isLateStart ? ' is-late-start' : ''}${isChangeover ? ' is-changeover' : ''}`;
+                if (existingDiv?.classList.contains('up-next') && existingDiv.querySelector('.np-artist')?.textContent === upNext && existingDiv.classList.contains('is-late-start') === isLateStart && existingDiv.classList.contains('is-changeover') === isChangeover) {
                     existingDiv.classList.toggle('starting-soon', startingSoon);
                     const cd = existingDiv.querySelector('.np-countdown');
                     if (cd) cd.textContent = countdown;
                 } else {
+                    const lateLabel = isPreshow ? 'Should Be In' : 'Should Be On';
                     section.innerHTML = `
                         <div class="${cl}${startingSoon ? ' starting-soon' : ''}">
-                            <span class="np-label">${isLateStart ? 'Should Be On' : 'Up Next'}</span>
+                            ${isChangeover ? '<span class="np-changeover">CHANGEOVER</span>' : ''}
+                            <span class="np-label">${isLateStart ? lateLabel : 'Up Next'}</span>
                             <span class="np-artist">${upNext}</span>
                             <div class="np-countdown-wrap">
                                 <span class="np-countdown${isLateStart ? ' late-start' : ''}">${countdown}</span>

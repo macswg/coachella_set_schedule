@@ -15,7 +15,7 @@
         <span class="status-dot status-pending"></span>
     </div>
     <div class="act-info">
-        <div class="act-name act-loadin-label">{{ act.act_name }}</div>
+        <div class="act-name act-loadin-label">{{ act.act_name | replace('Set: ', '') | replace('Set:', '') }}</div>
         <div class="act-times">
             <span class="scheduled-times">{{ act.scheduled_start.strftime('%H:%M') }}</span>
         </div>
@@ -33,7 +33,7 @@
     </div>
 
     <div class="act-info">
-        <div class="act-name">{{ act.act_name }}</div>
+        <div class="act-name">{{ act.act_name | replace('Set: ', '') | replace('Set:', '') }}</div>
         <div class="act-times">
             <span class="scheduled-times">
                 {{ act.scheduled_start.strftime('%H:%M') }} - {{ act.scheduled_end.strftime('%H:%M') if act.scheduled_end else '?' }}

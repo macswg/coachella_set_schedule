@@ -178,6 +178,15 @@ body {
     border-radius: 12px;
 }
 
+.np-changeover {
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--accent-secondary);
+    opacity: 0.7;
+}
+
 .np-label {
     font-size: 0.875rem;
     text-transform: uppercase;
@@ -710,6 +719,15 @@ body {
     opacity: 0.8;
 }
 
+/* Missed act — scheduled window passed, never started */
+.act-missed {
+    color: var(--text-muted);
+}
+
+.act-missed .btn-start {
+    background-color: var(--text-muted);
+}
+
 /* Act Alert States */
 .act-live {
     background-color: rgba(68, 255, 68, 0.15);
@@ -993,8 +1011,12 @@ body {
     line-height: 1.1;
 }
 
+.stage-display .np-changeover {
+    font-size: 6vw;
+}
+
 .stage-start-time {
-    font-size: 4vw;
+    font-size: 3vw;
     color: var(--text-primary);
     line-height: 1.1;
 }

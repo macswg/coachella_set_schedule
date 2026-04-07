@@ -47,10 +47,25 @@ function stageApp() {
     return {
         currentTime: '',
         serverOnline: false,
+        clockOffsetMs: 0,
+
+        async syncClock() {
+            try {
+                const before = Date.now();
+                const res = await fetch('/api/time');
+                const after = Date.now();
+                const { epoch_ms } = await res.json();
+                const clientMidpoint = Math.round((before + after) / 2);
+                this.clockOffsetMs = epoch_ms - clientMidpoint;
+            } catch (e) {
+                console.warn('Clock sync failed:', e);
+            }
+        },
 
         init() {
-            this.updateTime();
+            this.syncClock().then(() => this.updateTime());
             setInterval(() => this.updateTime(), 1000);
+            setInterval(() => this.syncClock(), 60000);
             document.body.addEventListener('htmx:wsAfterMessage', () => this.updateTime());
             document.body.addEventListener('htmx:wsOpen', () => { this.serverOnline = true; });
             document.body.addEventListener('htmx:wsClose', () => { this.serverOnline = false; });
@@ -60,12 +75,13 @@ function stageApp() {
         },
 
         updateTime() {
-            const now = new Date();
+            const now = new Date(Date.now() + this.clockOffsetMs);
             this.currentTime = now.toLocaleTimeString('en-US', {
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit',
-                hour12: false
+                hour12: false,
+                timeZone: '{{ timezone }}'
             });
 
             let currentSecs = timeToSeconds(this.currentTime);
@@ -100,9 +116,11 @@ function stageApp() {
             let countdown = '';
             let isOvertime = false;
             let isLateStart = false;
+            let isChangeover = false;
 
             let shouldBePlayingNow = null;
             let nextUpcoming = null;
+            let seenAnyAct = false;
 
             for (const act of acts) {
                 if (act.isLoadIn || act.isOnDeck) continue;
@@ -115,15 +133,17 @@ function stageApp() {
                     break;
                 }
 
-                if (act.hasActualEnd) continue;
+                if (act.hasActualEnd) { seenAnyAct = true; continue; }
 
                 if (!act.hasActualStart && currentSecs >= act.scheduledStart && currentSecs < act.scheduledEnd) {
-                    shouldBePlayingNow = { name: act.name, startSecs: act.scheduledStart, startTime: act.scheduledStartTime };
+                    shouldBePlayingNow = { name: act.name, startSecs: act.scheduledStart, startTime: act.scheduledStartTime, isChangeover: seenAnyAct };
                 }
 
                 if (!act.hasActualStart && currentSecs < act.scheduledStart && !nextUpcoming) {
-                    nextUpcoming = { name: act.name, startSecs: act.scheduledStart, startTime: act.scheduledStartTime };
+                    nextUpcoming = { name: act.name, startSecs: act.scheduledStart, startTime: act.scheduledStartTime, isChangeover: seenAnyAct };
                 }
+
+                seenAnyAct = true;
             }
 
             let startingSoon = false;
@@ -133,10 +153,12 @@ function stageApp() {
                 const lateBy = currentSecs - shouldBePlayingNow.startSecs;
                 countdown = formatCountdown(-lateBy);
                 isLateStart = true;
+                isChangeover = shouldBePlayingNow.isChangeover;
             } else if (!nowPlaying && nextUpcoming) {
                 upNext = nextUpcoming.name;
                 upNextStartTime = nextUpcoming.startTime;
                 countdown = formatCountdown(nextUpcoming.startSecs - currentSecs);
+                isChangeover = nextUpcoming.isChangeover;
                 const secsUntilStart = nextUpcoming.startSecs - currentSecs;
                 startingSoon = secsUntilStart > 0 && secsUntilStart <= 120;
             }
@@ -162,14 +184,15 @@ function stageApp() {
                         </div>`;
                 }
             } else if (upNext) {
-                const cl = `up-next${isLateStart ? ' is-late-start' : ''}`;
-                if (existingDiv?.classList.contains('up-next') && existingDiv.querySelector('.np-artist')?.textContent === upNext && existingDiv.classList.contains('is-late-start') === isLateStart) {
+                const cl = `up-next${isLateStart ? ' is-late-start' : ''}${isChangeover ? ' is-changeover' : ''}`;
+                if (existingDiv?.classList.contains('up-next') && existingDiv.querySelector('.np-artist')?.textContent === upNext && existingDiv.classList.contains('is-late-start') === isLateStart && existingDiv.classList.contains('is-changeover') === isChangeover) {
                     existingDiv.classList.toggle('starting-soon', startingSoon);
                     const cd = existingDiv.querySelector('.np-countdown');
                     if (cd) cd.textContent = countdown;
                 } else {
                     section.innerHTML = `
                         <div class="${cl}${startingSoon ? ' starting-soon' : ''}">
+                            ${isChangeover ? '<span class="np-changeover">CHANGEOVER</span>' : ''}
                             <span class="np-label">${isLateStart ? 'Should Be On' : 'Up Next'}</span>
                             <span class="np-artist">${upNext}</span>
                             <span class="stage-start-time"><span class="stage-start-time-label">Scheduled Start:</span> <span class="stage-start-time-value">${upNextStartTime}</span></span>

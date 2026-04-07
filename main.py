@@ -105,6 +105,7 @@ def get_template_context(request: Request = None) -> dict:
         "format_variance": format_variance,
         "sheet_tab": store.get_current_show() if settings.USE_GOOGLE_SHEETS else None,
         "use_google_sheets": settings.USE_GOOGLE_SHEETS,
+        "timezone": settings.TIMEZONE,
         "has_next_show": store.has_next_show(),
         "current_show": store.get_current_show(),
         "next_show": store.get_next_show(),
@@ -236,6 +237,13 @@ async def get_next_act():
             }
 
     return {"act_name": None, "seconds_until": None}
+
+
+@app.get("/api/time")
+async def get_server_time():
+    """Return the current server time as UTC epoch ms, for client clock sync."""
+    now = datetime.now(tz=ZoneInfo(settings.TIMEZONE))
+    return {"epoch_ms": int(now.timestamp() * 1000)}
 
 
 @app.get("/api/brightness")
