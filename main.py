@@ -63,8 +63,11 @@ async def lifespan(app: FastAPI):
         artnet_listener = ArtNetListener(
             port=settings.ARTNET_PORT,
             universe=settings.ARTNET_UNIVERSE,
+            bit_depth=settings.ARTNET_BIT_DEPTH,
+            channel=settings.ARTNET_CHANNEL,
             channel_high=settings.ARTNET_CHANNEL_HIGH,
             channel_low=settings.ARTNET_CHANNEL_LOW,
+            max_nits=settings.ARTNET_MAX_NITS,
             callback=on_brightness_change,
         )
         await artnet_listener.start()

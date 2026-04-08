@@ -40,8 +40,12 @@ class Settings:
     ARTNET_ENABLED: bool = os.getenv("ARTNET_ENABLED", "false").lower() == "true"
     ARTNET_PORT: int = int(os.getenv("ARTNET_PORT", "6454"))
     ARTNET_UNIVERSE: int = int(os.getenv("ARTNET_UNIVERSE", "0"))
+    ARTNET_MAX_NITS: int = int(os.getenv("ARTNET_MAX_NITS", "11000"))
+    ARTNET_BIT_DEPTH: int = int(os.getenv("ARTNET_BIT_DEPTH", "16"))
+    ARTNET_CHANNEL: int = int(os.getenv("ARTNET_CHANNEL", "1"))
     ARTNET_CHANNEL_HIGH: int = int(os.getenv("ARTNET_CHANNEL_HIGH", "1"))
     ARTNET_CHANNEL_LOW: int = int(os.getenv("ARTNET_CHANNEL_LOW", "2"))
+    ARTNET_MAX_VALUE: int = int(os.getenv("ARTNET_MAX_VALUE", "65535"))
 
 
 settings = Settings()

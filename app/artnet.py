@@ -10,13 +10,9 @@ logger = logging.getLogger(__name__)
 ARTNET_HEADER = b"Art-Net\x00"
 ARTNET_OPCODE_DMX = 0x5000
 
-# Maximum nits value for display
-MAX_NITS = 11000
-
-
-def calculate_nits(value_16bit: int) -> int:
-    """Convert 16-bit DMX value (0-65535) to nits (0-11000)."""
-    return round((value_16bit / 65535) * MAX_NITS)
+def calculate_nits(value: int, max_value: int, max_nits: int) -> int:
+    """Convert a DMX value to nits."""
+    return round(min(value / max_value, 1.0) * max_nits)
 
 
 class ArtNetListener:
@@ -26,8 +22,11 @@ class ArtNetListener:
         self,
         port: int = 6454,
         universe: int = 0,
+        bit_depth: int = 16,
+        channel: int = 1,
         channel_high: int = 1,
         channel_low: int = 2,
+        max_nits: int = 11000,
         callback: Optional[Callable[[int], None]] = None,
     ):
         """
@@ -36,14 +35,19 @@ class ArtNetListener:
         Args:
             port: UDP port to listen on (default 6454)
             universe: Art-Net universe to filter (default 0)
-            channel_high: DMX channel for high byte of 16-bit value (1-512)
-            channel_low: DMX channel for low byte of 16-bit value (1-512)
+            bit_depth: 8 for single-channel (0-255) or 16 for high/low byte pair (default 16)
+            channel: DMX channel for 8-bit mode (1-512)
+            channel_high: DMX channel for high byte in 16-bit mode (1-512)
+            channel_low: DMX channel for low byte in 16-bit mode (1-512)
             callback: Async function called when brightness value changes (receives nits)
         """
         self.port = port
         self.universe = universe
+        self.bit_depth = bit_depth
+        self.channel = channel
         self.channel_high = channel_high
         self.channel_low = channel_low
+        self.max_nits = max_nits
         self.callback = callback
         self._transport: Optional[asyncio.DatagramTransport] = None
         self._protocol: Optional["ArtNetProtocol"] = None
@@ -57,10 +61,12 @@ class ArtNetListener:
             local_addr=("0.0.0.0", self.port),
             allow_broadcast=True,
         )
-        print(f"Art-Net listener started on port {self.port}, universe {self.universe}, "
-              f"channels {self.channel_high} (high) / {self.channel_low} (low)", flush=True)
-        logger.info(f"Art-Net listener started on port {self.port}, universe {self.universe}, "
-                    f"channels {self.channel_high} (high) / {self.channel_low} (low)")
+        if self.bit_depth == 8:
+            ch_info = f"channel {self.channel} (8-bit)"
+        else:
+            ch_info = f"channels {self.channel_high} (high) / {self.channel_low} (low) (16-bit)"
+        print(f"Art-Net listener started on port {self.port}, universe {self.universe}, {ch_info}", flush=True)
+        logger.info(f"Art-Net listener started on port {self.port}, universe {self.universe}, {ch_info}")
 
     def stop(self) -> None:
         """Stop listening for Art-Net packets."""
@@ -108,32 +114,30 @@ class ArtNetListener:
         # Get DMX data length (big-endian)
         dmx_length = int.from_bytes(data[16:18], byteorder="big")
 
-        # Check if both channels are within the DMX data
-        max_channel = max(self.channel_high, self.channel_low)
-        if max_channel < 1 or max_channel > dmx_length:
-            return None
-
-        # Extract channel values (DMX channels are 1-indexed, array is 0-indexed)
         dmx_data = data[18:]
-        high_index = self.channel_high - 1
-        low_index = self.channel_low - 1
 
-        if high_index >= len(dmx_data) or low_index >= len(dmx_data):
-            return None
+        if self.bit_depth == 8:
+            idx = self.channel - 1
+            if idx < 0 or idx >= dmx_length or idx >= len(dmx_data):
+                return None
+            return dmx_data[idx]
+        else:
+            max_channel = max(self.channel_high, self.channel_low)
+            if max_channel < 1 or max_channel > dmx_length:
+                return None
+            high_index = self.channel_high - 1
+            low_index = self.channel_low - 1
+            if high_index >= len(dmx_data) or low_index >= len(dmx_data):
+                return None
+            return (dmx_data[high_index] * 256) + dmx_data[low_index]
 
-        high_byte = dmx_data[high_index]
-        low_byte = dmx_data[low_index]
-
-        # Combine into 16-bit value
-        value_16bit = (high_byte * 256) + low_byte
-        return value_16bit
-
-    async def handle_value(self, value_16bit: int) -> None:
-        """Handle a new 16-bit value, converting to nits and calling callback if changed."""
-        nits = calculate_nits(value_16bit)
+    async def handle_value(self, value: int) -> None:
+        """Handle a new DMX value, converting to nits and calling callback if changed."""
+        max_value = 255 if self.bit_depth == 8 else 65535
+        nits = calculate_nits(value, max_value, self.max_nits)
         if nits != self._last_value:
             self._last_value = nits
-            logger.debug(f"Art-Net 16-bit value {value_16bit} -> {nits} nits")
+            logger.debug(f"Art-Net value {value} -> {nits} nits")
             if self.callback:
                 await self.callback(nits)
 
