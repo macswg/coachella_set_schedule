@@ -26,9 +26,8 @@
     <!-- Now Playing / Up Next card — same structure as main display -->
     <section class="now-playing-section stage-np-section" id="stage-up-next"></section>
 
-    <!-- On Deck + Load In cards — shown side-by-side when active -->
+    <!-- Load In card — shown when active -->
     <div class="stage-lower-sections" id="stage-lower-sections" style="display:none">
-        <section class="now-playing-section stage-lower-card" id="stage-on-deck"></section>
         <section class="now-playing-section stage-lower-card" id="stage-load-in"></section>
     </div>
 
@@ -117,50 +116,76 @@ function stageApp() {
             let isOvertime = false;
             let isLateStart = false;
             let isChangeover = false;
+            let isOnDeck = false;
+            let countdownSuffix = 'until start';
 
             let shouldBePlayingNow = null;
             let nextUpcoming = null;
             let seenAnyAct = false;
 
             for (const act of acts) {
-                if (act.isLoadIn || act.isOnDeck) continue;
+                if (act.isLoadIn) continue;
 
-                if (act.hasActualStart && !act.hasActualEnd) {
-                    nowPlaying = act.name;
-                    const remaining = act.scheduledEnd - currentSecs;
-                    countdown = formatCountdown(remaining);
-                    isOvertime = remaining < 0;
-                    break;
+                if (!act.isOnDeck) {
+                    // Regular act: check if currently playing
+                    if (act.hasActualStart && !act.hasActualEnd) {
+                        nowPlaying = act.name;
+                        const remaining = act.scheduledEnd - currentSecs;
+                        countdown = formatCountdown(remaining);
+                        isOvertime = remaining < 0;
+                        break;
+                    }
+                    if (act.hasActualEnd) { seenAnyAct = true; continue; }
                 }
 
-                if (act.hasActualEnd) { seenAnyAct = true; continue; }
-
-                if (!act.hasActualStart && currentSecs >= act.scheduledStart && currentSecs < act.scheduledEnd) {
-                    shouldBePlayingNow = { name: act.name, startSecs: act.scheduledStart, startTime: act.scheduledStartTime, isChangeover: seenAnyAct };
+                // Active window (On Deck or regular act without actual times)
+                if (!act.hasActualStart && currentSecs >= act.scheduledStart && currentSecs < act.scheduledEnd && !shouldBePlayingNow) {
+                    shouldBePlayingNow = {
+                        name: act.name,
+                        startSecs: act.scheduledStart,
+                        endSecs: act.scheduledEnd,
+                        startTime: act.scheduledStartTime,
+                        isChangeover: act.isOnDeck ? false : seenAnyAct,
+                        isOnDeck: act.isOnDeck,
+                    };
                 }
 
+                // Upcoming
                 if (!act.hasActualStart && currentSecs < act.scheduledStart && !nextUpcoming) {
-                    nextUpcoming = { name: act.name, startSecs: act.scheduledStart, startTime: act.scheduledStartTime, isChangeover: seenAnyAct };
+                    nextUpcoming = {
+                        name: act.name,
+                        startSecs: act.scheduledStart,
+                        startTime: act.scheduledStartTime,
+                        isChangeover: act.isOnDeck ? false : seenAnyAct,
+                        isOnDeck: act.isOnDeck,
+                    };
                 }
 
-                seenAnyAct = true;
+                if (!act.isOnDeck) seenAnyAct = true;
             }
 
             let startingSoon = false;
             if (!nowPlaying && shouldBePlayingNow) {
                 upNext = shouldBePlayingNow.name;
                 upNextStartTime = shouldBePlayingNow.startTime;
-                const lateBy = currentSecs - shouldBePlayingNow.startSecs;
-                countdown = formatCountdown(-lateBy);
-                isLateStart = true;
                 isChangeover = shouldBePlayingNow.isChangeover;
+                isOnDeck = shouldBePlayingNow.isOnDeck;
+                if (isOnDeck) {
+                    countdown = formatCountdown(shouldBePlayingNow.endSecs - currentSecs);
+                    countdownSuffix = 'remaining';
+                } else {
+                    countdown = formatCountdown(-(currentSecs - shouldBePlayingNow.startSecs));
+                    isLateStart = true;
+                    countdownSuffix = 'late';
+                }
             } else if (!nowPlaying && nextUpcoming) {
                 upNext = nextUpcoming.name;
                 upNextStartTime = nextUpcoming.startTime;
                 countdown = formatCountdown(nextUpcoming.startSecs - currentSecs);
                 isChangeover = nextUpcoming.isChangeover;
+                isOnDeck = nextUpcoming.isOnDeck;
                 const secsUntilStart = nextUpcoming.startSecs - currentSecs;
-                startingSoon = secsUntilStart > 0 && secsUntilStart <= 120;
+                startingSoon = !isOnDeck && secsUntilStart > 0 && secsUntilStart <= 120;
             }
 
             // Avoid rebuilding innerHTML every tick to preserve CSS animations
@@ -184,11 +209,29 @@ function stageApp() {
                         </div>`;
                 }
             } else if (upNext) {
-                const cl = `up-next${isLateStart ? ' is-late-start' : ''}${isChangeover ? ' is-changeover' : ''}`;
-                if (existingDiv?.classList.contains('up-next') && existingDiv.querySelector('.np-artist')?.textContent === upNext && existingDiv.classList.contains('is-late-start') === isLateStart && existingDiv.classList.contains('is-changeover') === isChangeover) {
+                const cl = `up-next${isLateStart ? ' is-late-start' : ''}${isChangeover ? ' is-changeover' : ''}${isOnDeck ? ' is-on-deck' : ''}`;
+                const sameCard = existingDiv?.classList.contains('up-next')
+                    && existingDiv.querySelector('.np-artist')?.textContent === upNext
+                    && existingDiv.classList.contains('is-late-start') === isLateStart
+                    && existingDiv.classList.contains('is-changeover') === isChangeover
+                    && existingDiv.classList.contains('is-on-deck') === isOnDeck;
+                if (sameCard) {
                     existingDiv.classList.toggle('starting-soon', startingSoon);
                     const cd = existingDiv.querySelector('.np-countdown');
                     if (cd) cd.textContent = countdown;
+                    const sf = existingDiv.querySelector('.np-suffix');
+                    if (sf) sf.textContent = countdownSuffix;
+                } else if (isOnDeck) {
+                    section.innerHTML = `
+                        <div class="${cl}">
+                            <span class="np-label">On Deck</span>
+                            <span class="np-artist">${upNext}</span>
+                            <span class="stage-start-time"><span class="stage-start-time-label">Scheduled Start:</span> <span class="stage-start-time-value">${upNextStartTime}</span></span>
+                            <div class="np-countdown-wrap">
+                                <span class="np-countdown">${countdown}</span>
+                                <span class="np-suffix">${countdownSuffix}</span>
+                            </div>
+                        </div>`;
                 } else {
                     section.innerHTML = `
                         <div class="${cl}${startingSoon ? ' starting-soon' : ''}">
@@ -198,7 +241,7 @@ function stageApp() {
                             <span class="stage-start-time"><span class="stage-start-time-label">Scheduled Start:</span> <span class="stage-start-time-value">${upNextStartTime}</span></span>
                             <div class="np-countdown-wrap">
                                 <span class="np-countdown${isLateStart ? ' late-start' : ''}">${countdown}</span>
-                                <span class="np-suffix">${isLateStart ? 'late' : 'until start'}</span>
+                                <span class="np-suffix">${countdownSuffix}</span>
                             </div>
                         </div>`;
                 }
@@ -206,25 +249,14 @@ function stageApp() {
                 section.innerHTML = '';
             }
 
-            // On Deck and Load In lower cards
-            const onDeckAct = acts.find(a =>
-                a.isOnDeck && a.scheduledEnd !== null &&
-                currentSecs >= a.scheduledStart && currentSecs < a.scheduledEnd
-            );
+            // Load In lower card
             const loadInAct = acts.find(a =>
                 a.isLoadIn && a.scheduledStart !== null &&
                 currentSecs >= a.scheduledStart - 10800 && currentSecs < a.scheduledStart + 3600
             );
-            const hasLower = !!(onDeckAct || loadInAct);
+            const hasLower = !!loadInAct;
             section.classList.toggle('stage-np-compact', hasLower);
             document.getElementById('stage-lower-sections').style.display = hasLower ? 'flex' : 'none';
-
-            const onDeckEl = document.getElementById('stage-on-deck');
-            if (onDeckAct) {
-                onDeckEl.innerHTML = `<div class="stage-lower-card-inner stage-on-deck-card"><span class="np-label">On Deck</span><span class="np-artist">${onDeckAct.name}</span><span class="stage-lower-times">${onDeckAct.scheduledStartTime} – ${onDeckAct.scheduledEndTime}</span></div>`;
-            } else {
-                onDeckEl.innerHTML = '';
-            }
 
             const loadInEl = document.getElementById('stage-load-in');
             if (loadInAct) {
