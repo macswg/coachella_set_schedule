@@ -209,7 +209,7 @@ function stageApp() {
             // On Deck and Load In lower cards
             const onDeckAct = acts.find(a =>
                 a.isOnDeck && a.scheduledEnd !== null &&
-                currentSecs >= a.scheduledStart - 10800 && currentSecs < a.scheduledEnd
+                currentSecs >= a.scheduledStart && currentSecs < a.scheduledEnd
             );
             const loadInAct = acts.find(a =>
                 a.isLoadIn && a.scheduledStart !== null &&
