@@ -22,6 +22,10 @@ _enabled: bool = settings.RECORDING_ENABLED
 # Acts triggered this session — prevents double-firing across poll cycles
 _triggered: set[str] = set()
 
+# How long after scheduled start to keep the trigger window open.
+# Prevents late-night now_secs from matching early-morning trigger_secs.
+_TRIGGER_GRACE_SECONDS = 3600
+
 # Acts with active stop reminders shown on /edit
 # Populated when triggered, cleared by operator via stop or dismiss
 _active_reminders: set[str] = set()
@@ -62,10 +66,21 @@ def check_and_fire(acts: list[Act]) -> list[str]:
 
         start_secs = _time_to_secs(act.scheduled_start)
         trigger_secs = start_secs - pre_secs
+        window_end = (start_secs + _TRIGGER_GRACE_SECONDS) % 86400
+
         if trigger_secs < 0:
             trigger_secs += 86400
 
-        if now_secs >= trigger_secs:
+        # Only fire within [trigger_secs, start + grace], handling midnight wrap.
+        # Without the upper bound, a post-midnight act's tiny trigger_secs would
+        # match any late-evening now_secs (e.g. 23:00 >= 00:25 in raw seconds).
+        if trigger_secs <= window_end:
+            in_window = trigger_secs <= now_secs <= window_end
+        else:
+            # Window crosses midnight (e.g. trigger at 23:55, window_end at 01:30)
+            in_window = now_secs >= trigger_secs or now_secs <= window_end
+
+        if in_window:
             try:
                 recorder.start_recording(act.act_name)
             except Exception as e:

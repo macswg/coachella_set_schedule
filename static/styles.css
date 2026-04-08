@@ -1102,18 +1102,22 @@ body {
 
 /* Advance to Next Show Button */
 .btn-advance-show {
-    background: #7a5500;
-    color: #ffc107;
-    border: 1px solid #ffc107;
+    background: transparent;
+    color: #7a6000;
+    border: 1px solid #4a3a00;
     padding: 0.5rem 1rem;
     border-radius: 4px;
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 600;
+    opacity: 0.6;
 }
 
 .btn-advance-show:hover {
-    background: #996800;
+    background: #2a2000;
+    color: #a07800;
+    border-color: #6a5200;
+    opacity: 1;
 }
 
 /* Recording Toggle Button */

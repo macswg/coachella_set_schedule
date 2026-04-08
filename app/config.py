@@ -33,6 +33,9 @@ class Settings:
     RECORDING_PRE_START_MINUTES: int = int(os.getenv("RECORDING_PRE_START_MINUTES", "5"))
     RECORDING_ACT_PREFIX: str = os.getenv("RECORDING_ACT_PREFIX", "")
 
+    # Ki Pro recorder configuration
+    KIPRO_IP: str = os.getenv("KIPRO_IP", "")
+
     # Art-Net configuration
     ARTNET_ENABLED: bool = os.getenv("ARTNET_ENABLED", "false").lower() == "true"
     ARTNET_PORT: int = int(os.getenv("ARTNET_PORT", "6454"))
