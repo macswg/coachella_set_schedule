@@ -57,6 +57,8 @@ class ArtNetListener:
             local_addr=("0.0.0.0", self.port),
             allow_broadcast=True,
         )
+        print(f"Art-Net listener started on port {self.port}, universe {self.universe}, "
+              f"channels {self.channel_high} (high) / {self.channel_low} (low)", flush=True)
         logger.info(f"Art-Net listener started on port {self.port}, universe {self.universe}, "
                     f"channels {self.channel_high} (high) / {self.channel_low} (low)")
 
@@ -153,6 +155,7 @@ class ArtNetProtocol(asyncio.DatagramProtocol):
 
     def datagram_received(self, data: bytes, addr: tuple) -> None:
         """Called when a UDP packet is received."""
+        print(f"Art-Net packet from {addr}, {len(data)} bytes", flush=True)
         logger.debug(f"Art-Net packet from {addr}, {len(data)} bytes, header={data[:8]}")
         value_16bit = self.listener.parse_packet(data)
         if value_16bit is not None:
