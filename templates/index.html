@@ -405,7 +405,7 @@ function scheduleApp() {
                 } else if (isOnDeck) {
                     section.innerHTML = `
                         <div class="${cl}">
-                            <span class="np-label">On Deck</span>
+                            <span class="np-label">${countdownSuffix === 'remaining' ? 'On Deck' : 'Up Next'}</span>
                             <span class="np-artist">${upNext}</span>
                             <div class="np-countdown-wrap">
                                 <span class="np-countdown">${countdown}</span>

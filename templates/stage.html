@@ -108,7 +108,9 @@ function stageApp() {
         formatActName(name) {
             const colonIdx = name.indexOf(':');
             if (colonIdx !== -1) {
-                return name.slice(colonIdx + 1).trim();
+                const prefix = name.slice(0, colonIdx + 1);
+                const rest = name.slice(colonIdx + 1).trim();
+                return `<span class="np-artist-prefix">${prefix}</span>${rest}`;
             }
             return name;
         },
@@ -232,7 +234,7 @@ function stageApp() {
                 } else if (isOnDeck) {
                     section.innerHTML = `
                         <div class="${cl}">
-                            <span class="np-label">On Deck</span>
+                            <span class="np-label">${countdownSuffix === 'remaining' ? 'On Deck' : 'Up Next'}</span>
                             <span class="np-artist">${this.formatActName(upNext)}</span>
                             <span class="stage-start-time"><span class="stage-start-time-label">Scheduled Start:</span> <span class="stage-start-time-value">${upNextStartTime}</span></span>
                             <div class="np-countdown-wrap">
@@ -288,6 +290,10 @@ function toggleFullscreen() {
 document.addEventListener('fullscreenchange', () => {
     const btn = document.getElementById('fullscreen-btn');
     if (btn) btn.style.display = document.fullscreenElement ? 'none' : '';
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'f' || e.key === 'F') toggleFullscreen();
 });
 </script>
 {% endblock %}
