@@ -55,6 +55,7 @@ class ArtNetListener:
         self._transport, self._protocol = await loop.create_datagram_endpoint(
             lambda: ArtNetProtocol(self),
             local_addr=("0.0.0.0", self.port),
+            allow_broadcast=True,
         )
         logger.info(f"Art-Net listener started on port {self.port}, universe {self.universe}, "
                     f"channels {self.channel_high} (high) / {self.channel_low} (low)")
@@ -152,9 +153,17 @@ class ArtNetProtocol(asyncio.DatagramProtocol):
 
     def datagram_received(self, data: bytes, addr: tuple) -> None:
         """Called when a UDP packet is received."""
+        logger.debug(f"Art-Net packet from {addr}, {len(data)} bytes, header={data[:8]}")
         value_16bit = self.listener.parse_packet(data)
         if value_16bit is not None:
             asyncio.create_task(self.listener.handle_value(value_16bit))
+        else:
+            # Log why packet was rejected to aid troubleshooting
+            if len(data) >= 8 and data[:8] == b"Art-Net\x00":
+                universe = int.from_bytes(data[14:16], byteorder="little") if len(data) >= 16 else "?"
+                logger.debug(f"Art-Net packet rejected: universe={universe} (expected {self.listener.universe})")
+            else:
+                logger.debug(f"Non-Art-Net packet from {addr}")
 
     def error_received(self, exc: Exception) -> None:
         """Called when a send or receive error occurs."""

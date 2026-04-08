@@ -2,8 +2,7 @@ services:
   app:
     build: .
     restart: unless-stopped
-    ports:
-      - "80:${PORT:-8000}"
+    network_mode: host
     env_file:
       - .env
     volumes:
