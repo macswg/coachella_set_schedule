@@ -105,6 +105,14 @@ function stageApp() {
             this.updateDisplay(currentSecs, acts);
         },
 
+        formatActName(name) {
+            const colonIdx = name.indexOf(':');
+            if (colonIdx !== -1) {
+                return name.slice(colonIdx + 1).trim();
+            }
+            return name;
+        },
+
         updateDisplay(currentSecs, acts) {
             const section = document.getElementById('stage-up-next');
             if (!section) return;
@@ -225,7 +233,7 @@ function stageApp() {
                     section.innerHTML = `
                         <div class="${cl}">
                             <span class="np-label">On Deck</span>
-                            <span class="np-artist">${upNext}</span>
+                            <span class="np-artist">${this.formatActName(upNext)}</span>
                             <span class="stage-start-time"><span class="stage-start-time-label">Scheduled Start:</span> <span class="stage-start-time-value">${upNextStartTime}</span></span>
                             <div class="np-countdown-wrap">
                                 <span class="np-countdown">${countdown}</span>

@@ -992,38 +992,49 @@ body {
     gap: 2px;
 }
 
-.stage-display .np-label {
-    font-size: 1.5vw;
+.stage-np-section .np-label {
+    font-size: 3.5vw;
     line-height: 1.1;
 }
 
-.stage-display .np-artist {
-    font-size: 9vw;
+.stage-np-section .now-playing,
+.stage-np-section .up-next {
+    text-align: center;
+}
+
+.stage-np-section .np-artist {
+    font-size: 16vw;
+    line-height: 1.0;
+}
+
+.stage-np-section .np-countdown {
+    font-size: 18vw;
     line-height: 1.1;
 }
 
-.stage-display .np-countdown {
-    font-size: 8vw;
+.stage-np-section .np-suffix {
+    font-size: 4vw;
     line-height: 1.1;
 }
 
-.stage-display .np-suffix {
-    font-size: 1.5vw;
-    line-height: 1.1;
+.stage-np-section .np-changeover {
+    font-size: 10vw;
 }
 
-.stage-display .np-changeover {
-    font-size: 6vw;
-}
+/* Smaller when Load In card is showing alongside */
+.stage-np-section.stage-np-compact .np-label  { font-size: 2vw; }
+.stage-np-section.stage-np-compact .np-artist { font-size: 8vw; }
+.stage-np-section.stage-np-compact .np-countdown { font-size: 6vw; }
+.stage-np-section.stage-np-compact .np-suffix { font-size: 0.9vw; }
 
 .stage-start-time {
-    font-size: 3vw;
+    font-size: 4vw;
     color: var(--text-primary);
     line-height: 1.1;
 }
 
 .stage-start-time-value {
-    font-size: 13vw;
+    font-size: 18vw;
     font-variant-numeric: tabular-nums;
     font-weight: 700;
     line-height: 1.1;
@@ -1093,10 +1104,6 @@ body {
 .stage-np-section.stage-np-compact { padding: 12px; }
 .stage-np-section.stage-np-compact .now-playing,
 .stage-np-section.stage-np-compact .up-next { gap: 4px; }
-.stage-np-section.stage-np-compact .np-label  { font-size: 0.9vw; }
-.stage-np-section.stage-np-compact .np-artist { font-size: 3vw; }
-.stage-np-section.stage-np-compact .np-countdown { font-size: 4vw; }
-.stage-np-section.stage-np-compact .np-suffix { font-size: 0.9vw; }
 .stage-np-section.stage-np-compact .stage-start-time { font-size: 1.5vw; }
 .stage-np-section.stage-np-compact .stage-start-time-value { font-size: 3vw; }
 
