@@ -975,7 +975,7 @@ body {
 }
 
 .stage-display .current-time {
-    font-size: 8vh;
+    font-size: 12vh;
     line-height: 1.1;
 }
 
@@ -1019,12 +1019,12 @@ body {
 }
 
 .stage-np-section .np-artist {
-    font-size: 15vh;
+    font-size: 18vh;
     line-height: 1.0;
 }
 
 .stage-np-section .np-countdown {
-    font-size: 15vh;
+    font-size: 18vh;
     line-height: 1.1;
 }
 
@@ -1038,10 +1038,10 @@ body {
 }
 
 /* Smaller when Load In card is showing alongside */
-.stage-np-section.stage-np-compact .np-label  { font-size: 2vw; }
-.stage-np-section.stage-np-compact .np-artist { font-size: 8vw; }
-.stage-np-section.stage-np-compact .np-countdown { font-size: 6vw; }
-.stage-np-section.stage-np-compact .np-suffix { font-size: 0.9vw; }
+.stage-np-section.stage-np-compact .np-label  { font-size: 2vh; }
+.stage-np-section.stage-np-compact .np-artist { font-size: 14vh; }
+.stage-np-section.stage-np-compact .np-countdown { font-size: 14vh; }
+.stage-np-section.stage-np-compact .np-suffix { font-size: 2vh; }
 
 .stage-start-time {
     font-size: 2.5vh;
@@ -1050,7 +1050,7 @@ body {
 }
 
 .stage-start-time-value {
-    font-size: 12vh;
+    font-size: 14vh;
     font-variant-numeric: tabular-nums;
     font-weight: 700;
     line-height: 1.1;
