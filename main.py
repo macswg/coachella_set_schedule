@@ -113,6 +113,7 @@ def get_template_context(request: Request = None) -> dict:
         "current_show": store.get_current_show(),
         "next_show": store.get_next_show(),
         "app_version": APP_VERSION,
+        "kipro_configured": bool(settings.KIPRO_IP),
     }
 
 
@@ -309,6 +310,22 @@ async def advance_show():
     await broadcast_schedule_update()
     await manager.broadcast_reload()
     return {"status": "ok", "tab": store.get_current_show()}
+
+
+@app.post("/api/kipro/record")
+async def kipro_record():
+    """Manually start recording on the Ki Pro."""
+    from app import recorder
+    recorder.start_recording("manual")
+    return {"status": "ok"}
+
+
+@app.post("/api/kipro/stop")
+async def kipro_stop():
+    """Manually stop recording on the Ki Pro."""
+    from app import recorder
+    recorder.stop_recording("manual")
+    return {"status": "ok"}
 
 
 @app.get("/api/kipro/status")

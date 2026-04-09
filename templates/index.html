@@ -71,6 +71,10 @@
                     @click="fetch('/api/recording/toggle', {method:'POST'})">
                 <span x-text="recordingEnabled ? 'Rec Triggers: ON' : 'Rec Triggers: OFF'"></span>
             </button>
+            {% if kipro_configured %}
+            <button class="btn-deck btn-deck-record" title="Record" x-show="!kiproRolling" @click="fetch('/api/kipro/record', {method:'POST'})"></button>
+            <button class="btn-deck btn-deck-stop" title="Stop" x-show="kiproRolling" @click="fetch('/api/kipro/stop', {method:'POST'})"></button>
+            {% endif %}
             {% endif %}
 	    <button class="btn-toggle-completed" @click="hideCompleted = !hideCompleted">
                 <span x-text="hideCompleted ? 'Show Completed' : 'Hide Completed'"></span>

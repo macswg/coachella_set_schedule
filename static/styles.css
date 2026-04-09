@@ -1335,3 +1335,52 @@ body {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.2; }
 }
+
+/* Manual deck record/stop buttons */
+.btn-deck {
+    width: 32px;
+    height: 32px;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.1s, opacity 0.1s;
+}
+
+.btn-deck:hover {
+    transform: scale(1.1);
+}
+
+.btn-deck:active {
+    transform: scale(0.95);
+    opacity: 0.8;
+}
+
+.btn-deck-record {
+    background-color: #cc0000;
+    border-radius: 50%;
+}
+
+.btn-deck-record::after {
+    content: '';
+    width: 12px;
+    height: 12px;
+    background: #ff4444;
+    border-radius: 50%;
+}
+
+.btn-deck-stop {
+    background-color: #2a2a2a;
+    border-radius: 4px;
+    border: 1px solid #555;
+}
+
+.btn-deck-stop::after {
+    content: '';
+    width: 12px;
+    height: 12px;
+    background: #e0e0e0;
+    border-radius: 1px;
+}
