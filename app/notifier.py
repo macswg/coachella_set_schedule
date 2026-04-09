@@ -23,7 +23,7 @@ _notified_ending: set[str] = set()
 
 # Notification fires when now is within this window around the target time.
 # Should be >= poll interval (30s) to avoid missing the window.
-_WINDOW_SECONDS = 90
+_WINDOW_SECONDS = 45
 
 
 def _time_to_secs(t) -> int:
@@ -60,7 +60,7 @@ def check_and_notify(acts: list[Act]) -> None:
             target = (_time_to_secs(act.scheduled_start) - 300) % 86400
             if _in_window(now_secs, target):
                 notify(
-                    title=f"Starting in 5 min: {name}",
+                    title=f"Starting in ~5 min: {name}",
                     message=f"{name} is scheduled to start at {act.scheduled_start.strftime('%H:%M')}",
                     priority="high",
                     tags=["bell"],
@@ -72,7 +72,7 @@ def check_and_notify(acts: list[Act]) -> None:
             target = (_time_to_secs(act.scheduled_end) - 600) % 86400
             if _in_window(now_secs, target):
                 notify(
-                    title=f"Ending in 10 min: {name}",
+                    title=f"Ending in ~10 min: {name}",
                     message=f"{name} is scheduled to end at {act.scheduled_end.strftime('%H:%M')}",
                     priority="high",
                     tags=["stopwatch"],

@@ -82,16 +82,21 @@ coachella_set_schedule/
 ├── main.py              # FastAPI app entry point, background polling
 ├── requirements.txt     # Python dependencies
 ├── .env.example         # Environment variables template
+├── VERSION              # App version string (e.g. 1.0.6), read at startup
 ├── app/
-│   ├── config.py        # Settings from environment
+│   ├── config.py        # Settings from environment (includes APP_VERSION)
 │   ├── models.py        # Pydantic models (Act, Schedule)
 │   ├── slip.py          # Slip calculation logic
 │   ├── store.py         # In-memory mock data (development)
 │   ├── sheets.py        # Google Sheets integration (column-based parsing)
 │   ├── websocket.py     # WebSocket connection manager
-│   └── artnet.py        # Art-Net brightness listener (optional)
+│   ├── artnet.py        # Art-Net brightness listener (optional)
+│   ├── recorder.py      # AJA Ki Pro HTTP commands (record/stop/status)
+│   ├── triggers.py      # Schedule-based recording trigger engine
+│   ├── ntfy.py          # ntfy.sh push notification sender
+│   └── notifier.py      # Schedule-based and action-based ntfy notifications
 ├── templates/
-│   ├── base.html        # Base template with HTMX/Alpine.js
+│   ├── base.html        # Base template with HTMX/Alpine.js; renders version footer
 │   ├── index.html       # Main schedule view
 │   ├── stage.html       # Large-format stage display (/stage)
 │   └── components/
@@ -138,6 +143,36 @@ The `updateTime()` method runs every second and is the single entry point for al
 After WebSocket HTML swaps (from Google Sheets polling), `htmx:wsAfterMessage` triggers `updateTime()` to immediately re-apply countdowns and alerts before the browser paints. Use `htmx:wsAfterMessage` (not `htmx:afterSwap` or `htmx:afterSettle`) for flicker-free post-swap updates.
 
 The time-of-day override (`timeOverride` / `frozenTime`) is only surfaced on `/preview`. It freezes `currentTime` to a fixed value so operators can inspect how the page renders at any point in the schedule without waiting for real time to advance. A `+24h` toggle adds 86400 seconds to `currentSecs` (without changing the displayed time string) to simulate post-midnight viewing.
+
+## Versioning
+
+The app version is stored in the `VERSION` file at the repo root. It is read at startup in `app/config.py` into `APP_VERSION` and injected into every template context as `app_version`. The version is displayed subtly in the footer of every page (`base.html`). To bump the version, edit the `VERSION` file and restart the server.
+
+## AJA Ki Pro Integration
+
+Set `KIPRO_IP` in `.env` to enable. The app communicates with the Ki Pro via its HTTP API (`/config?action=...`).
+
+- **Automatic triggers** — `app/triggers.py` fires `start_recording()` a configurable number of minutes before a scheduled act start. Toggled live via the "Rec Triggers: ON/OFF" button on `/edit`.
+- **Manual record/stop buttons** — `/edit` shows a red record button and a stop button in the schedule header (only when `KIPRO_IP` is set). Only one is visible at a time, toggled by the actual deck state.
+- **Transport state polling** — the frontend polls `GET /api/kipro/status` every 5 seconds. This queries `eParamID_TransportState` on the Ki Pro; value `"2"` = recording. The REC banner in `/edit` is driven by this actual deck state (not just trigger state). If the deck is rolling with no active trigger, a generic "Deck Rolling" banner is shown.
+- **Manual API endpoints** — `POST /api/kipro/record` and `POST /api/kipro/stop` send commands directly to the deck.
+
+The transport state record value is `_STATE_RECORD = "2"` in `app/recorder.py` — adjust if your Ki Pro model returns a different value.
+
+## ntfy.sh Push Notifications
+
+Set `NTFY_URL` in `.env` (e.g. `https://ntfy.sh/your-topic`) to enable push notifications. All sends are fire-and-forget in daemon threads; everything silently no-ops if `NTFY_URL` is unset.
+
+Notifications fired by `app/notifier.py`:
+
+| Event | Title | Priority |
+|-------|-------|----------|
+| ~5 min before scheduled start | "Starting in ~5 min: {act}" | high |
+| ~10 min before scheduled end (act live) | "Ending in ~10 min: {act}" | high |
+| Operator marks set start | "Set started: {act}" | default |
+| Operator marks set complete | "Set complete: {act}" | default |
+
+Time-based notifications are checked each poll cycle (every 30s). A 45-second window is used to ensure the notification fires within one cycle of the target time. Each act fires each notification type at most once per server session.
 
 ## Offline Resilience
 
