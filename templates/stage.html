@@ -259,7 +259,9 @@ function stageApp() {
                 section.innerHTML = '';
             }
 
-            // Load In lower card
+            this.fitCardToSection();
+
+        // Load In lower card
             const loadInAct = acts.find(a =>
                 a.isLoadIn && a.scheduledStart !== null &&
                 currentSecs >= a.scheduledStart - 10800 && currentSecs < a.scheduledStart + 3600
@@ -273,6 +275,26 @@ function stageApp() {
                 loadInEl.innerHTML = `<div class="stage-lower-card-inner stage-load-in-card"><span class="np-label">Load In</span><span class="np-artist">${loadInAct.name}</span><span class="stage-lower-times">${loadInAct.scheduledStartTime}</span></div>`;
             } else {
                 loadInEl.innerHTML = '';
+            }
+        },
+
+        fitCardToSection() {
+            const section = document.getElementById('stage-up-next');
+            if (!section) return;
+            const card = section.firstElementChild;
+            if (!card) return;
+
+            // Reset before measuring so we get natural dimensions
+            card.style.transform = 'none';
+            card.style.transformOrigin = 'center center';
+
+            // scrollWidth/Height capture content that overflows the box
+            const scaleX = card.clientWidth / card.scrollWidth;
+            const scaleY = section.clientHeight / card.scrollHeight;
+            const scale = Math.min(scaleX, scaleY, 1);
+
+            if (scale < 0.99) {
+                card.style.transform = `scale(${scale})`;
             }
         },
 

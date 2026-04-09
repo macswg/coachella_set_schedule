@@ -1018,6 +1018,12 @@ body {
     text-align: center;
 }
 
+.stage-np-section .np-artist,
+.stage-np-section .np-countdown,
+.stage-np-section .stage-start-time-value {
+    white-space: nowrap;
+}
+
 .stage-np-section .np-artist {
     font-size: 18vh;
     line-height: 1.0;
@@ -1122,6 +1128,47 @@ body {
 .stage-np-section.stage-np-compact .up-next { gap: 4px; }
 .stage-np-section.stage-np-compact .stage-start-time { font-size: 1.5vw; }
 .stage-np-section.stage-np-compact .stage-start-time-value { font-size: 3vw; }
+
+/* Cap now-playing card at half height by default (non-fullscreen) */
+.stage-np-section {
+    flex: 0 0 50vh;
+    max-height: 50vh;
+}
+
+/* Scaled-down text for non-fullscreen (default); restored to full size in fullscreen below */
+.stage-np-section .np-label    { font-size: 1.5vh; }
+.stage-np-section .np-artist   { font-size: 9vh; }
+.stage-np-section .np-countdown { font-size: 9vh; }
+.stage-np-section .np-suffix   { font-size: 1.5vh; }
+.stage-np-section .np-changeover { font-size: 5vh; }
+.stage-np-section .stage-start-time-value { font-size: 7vh; }
+.stage-np-section.stage-np-compact .np-artist   { font-size: 7vh; }
+.stage-np-section.stage-np-compact .np-countdown { font-size: 7vh; }
+
+/* In fullscreen, fill all remaining space after the header */
+:fullscreen .stage-display .stage-np-section,
+:-webkit-full-screen .stage-display .stage-np-section {
+    flex: 1;
+    max-height: none;
+}
+
+/* Restore full-size text in fullscreen */
+:fullscreen .stage-np-section .np-label,
+:-webkit-full-screen .stage-np-section .np-label    { font-size: 2.5vh; }
+:fullscreen .stage-np-section .np-artist,
+:-webkit-full-screen .stage-np-section .np-artist   { font-size: 18vh; }
+:fullscreen .stage-np-section .np-countdown,
+:-webkit-full-screen .stage-np-section .np-countdown { font-size: 18vh; }
+:fullscreen .stage-np-section .np-suffix,
+:-webkit-full-screen .stage-np-section .np-suffix   { font-size: 2.5vh; }
+:fullscreen .stage-np-section .np-changeover,
+:-webkit-full-screen .stage-np-section .np-changeover { font-size: 10vh; }
+:fullscreen .stage-np-section .stage-start-time-value,
+:-webkit-full-screen .stage-np-section .stage-start-time-value { font-size: 14vh; }
+:fullscreen .stage-np-section.stage-np-compact .np-artist,
+:-webkit-full-screen .stage-np-section.stage-np-compact .np-artist   { font-size: 14vh; }
+:fullscreen .stage-np-section.stage-np-compact .np-countdown,
+:-webkit-full-screen .stage-np-section.stage-np-compact .np-countdown { font-size: 14vh; }
 
 /* Advance to Next Show Button */
 .btn-advance-show {
