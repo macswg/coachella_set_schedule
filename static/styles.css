@@ -58,7 +58,7 @@ body {
     padding: 20px;
     background-color: var(--bg-secondary);
     border-radius: 12px;
-    margin-bottom: 24px;
+    margin-bottom: 6px;
     border: 1px solid var(--border-color);
 }
 
@@ -139,7 +139,7 @@ body {
 .now-playing-section {
     background-color: var(--bg-secondary);
     border-radius: 12px;
-    margin-bottom: 24px;
+    margin-bottom: 6px;
     border: 1px solid var(--border-color);
     padding: 20px;
     text-align: center;
@@ -1222,6 +1222,10 @@ body {
 }
 
 /* Recording Banners (edit page only) */
+#recording-banners:not(:empty) {
+    margin-bottom: 6px;
+}
+
 .recording-banner {
     display: flex;
     align-items: center;
@@ -1230,7 +1234,11 @@ body {
     background: linear-gradient(135deg, rgba(220, 20, 20, 0.2) 0%, rgba(180, 0, 0, 0.12) 100%);
     border: 1px solid rgba(255, 60, 60, 0.5);
     border-radius: 10px;
-    margin-bottom: 12px;
+    margin-bottom: 6px;
+}
+
+.recording-banner:last-child {
+    margin-bottom: 0;
 }
 
 .recording-banner-dot {
