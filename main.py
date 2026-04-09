@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app.config import settings
+from app.config import settings, APP_VERSION
 from app import triggers as trigger_engine
 
 if settings.USE_GOOGLE_SHEETS:
@@ -112,6 +112,7 @@ def get_template_context(request: Request = None) -> dict:
         "has_next_show": store.has_next_show(),
         "current_show": store.get_current_show(),
         "next_show": store.get_next_show(),
+        "app_version": APP_VERSION,
     }
 
 

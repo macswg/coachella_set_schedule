@@ -4,6 +4,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+_version_file = Path(__file__).parent.parent / "VERSION"
+APP_VERSION = _version_file.read_text().strip() if _version_file.exists() else "unknown"
+
 
 class Settings:
     """Application settings loaded from environment variables."""
