@@ -1226,7 +1226,7 @@ body {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px 20px;
+    padding: 6px 20px;
     background: linear-gradient(135deg, rgba(220, 20, 20, 0.2) 0%, rgba(180, 0, 0, 0.12) 100%);
     border: 1px solid rgba(255, 60, 60, 0.5);
     border-radius: 10px;
@@ -1285,4 +1285,45 @@ body {
 .recording-dismiss-btn:hover {
     background-color: var(--border-color);
     color: var(--text-primary);
+}
+.kipro-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+}
+
+.kipro-rolling {
+    color: #ff4444;
+    border-color: #ff4444;
+}
+
+.kipro-stopped {
+    color: var(--text-muted);
+}
+
+.kipro-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.kipro-rolling .kipro-dot {
+    background-color: #ff4444;
+    animation: rec-pulse 1s ease-in-out infinite;
+}
+
+.kipro-stopped .kipro-dot {
+    background-color: var(--text-muted);
+}
+
+@keyframes rec-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
 }

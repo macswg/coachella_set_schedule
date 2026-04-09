@@ -100,6 +100,8 @@ function scheduleApp() {
         slip: {{ slip }},
         brightness: 0,
         recordingEnabled: false,
+        kiproRolling: null,
+        _activeActNames: [],
         timeOverride: '',
         frozenTime: null,
         nextDay: false,
@@ -128,6 +130,8 @@ function scheduleApp() {
             setInterval(() => this.updateTime(), 1000);
             setInterval(() => this.syncClock(), 60000);
             this.fetchBrightness();
+            this.pollKiProStatus();
+            setInterval(() => this.pollKiProStatus(), 5000);
             this.setupBrightnessListener();
             document.body.addEventListener('htmx:wsAfterMessage', () => this.updateTime());
             document.body.addEventListener('htmx:wsOpen', () => { this.serverOnline = true; });
@@ -139,6 +143,17 @@ function scheduleApp() {
             if (/CriOS/.test(navigator.userAgent)) {
                 const section = document.getElementById('now-playing-section');
                 if (section) section.classList.add('np-sticky');
+            }
+        },
+
+        async pollKiProStatus() {
+            try {
+                const res = await fetch('/api/kipro/status');
+                const data = await res.json();
+                this.kiproRolling = data.configured ? data.rolling : null;
+                this.refreshRecordingBanners();
+            } catch (e) {
+                // silently ignore — Ki Pro may not be on network
             }
         },
 
@@ -172,9 +187,42 @@ function scheduleApp() {
         },
 
         updateRecordingBanners(activeActNames) {
+            this._activeActNames = activeActNames;
+            this.refreshRecordingBanners();
+        },
+
+        refreshRecordingBanners() {
             const container = document.getElementById('recording-banners');
             if (!container) return;
-            container.innerHTML = activeActNames.map(name => `
+            const activeActNames = this._activeActNames || [];
+
+            // Ki Pro not configured — fall back to trigger-based banners only
+            if (this.kiproRolling === null) {
+                container.innerHTML = activeActNames.map(name => this._actBanner(name)).join('');
+                return;
+            }
+
+            // Ki Pro is the source of truth: only show banners when actually rolling
+            if (!this.kiproRolling) {
+                container.innerHTML = '';
+                return;
+            }
+
+            // Rolling — show act-specific banners, or a generic deck banner if no acts triggered
+            if (activeActNames.length > 0) {
+                container.innerHTML = activeActNames.map(name => this._actBanner(name)).join('');
+            } else {
+                container.innerHTML = `
+                    <div class="recording-banner">
+                        <span class="recording-banner-dot"></span>
+                        <span class="recording-banner-label">REC</span>
+                        <span class="recording-banner-act">Deck Rolling</span>
+                    </div>`;
+            }
+        },
+
+        _actBanner(name) {
+            return `
                 <div class="recording-banner">
                     <span class="recording-banner-dot"></span>
                     <span class="recording-banner-label">REC</span>
@@ -187,7 +235,7 @@ function scheduleApp() {
                             onclick="fetch('/acts/${encodeURIComponent(name)}/recording/dismiss', {method:'POST'})">
                         Dismiss
                     </button>
-                </div>`).join('');
+                </div>`;
         },
 
         updateTime() {

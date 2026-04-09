@@ -311,6 +311,14 @@ async def advance_show():
     return {"status": "ok", "tab": store.get_current_show()}
 
 
+@app.get("/api/kipro/status")
+async def kipro_status():
+    """Query Ki Pro transport state — returns whether the deck is currently rolling."""
+    import asyncio
+    from app import recorder
+    return await asyncio.to_thread(recorder.get_transport_state)
+
+
 @app.post("/api/recording/toggle")
 async def recording_toggle():
     """Toggle recording triggers on/off at runtime."""
