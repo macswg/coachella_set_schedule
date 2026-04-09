@@ -1359,7 +1359,7 @@ body {
 }
 
 .btn-deck-record {
-    background-color: #cc0000;
+    background-color: #3d0000;
     border-radius: 50%;
 }
 
@@ -1367,7 +1367,7 @@ body {
     content: '';
     width: 12px;
     height: 12px;
-    background: #ff4444;
+    background: #661111;
     border-radius: 50%;
 }
 

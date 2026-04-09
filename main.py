@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.config import settings, APP_VERSION
+from app import notifier
 from app import triggers as trigger_engine
 
 if settings.USE_GOOGLE_SHEETS:
@@ -43,6 +44,7 @@ async def poll_schedule():
                 if newly_triggered or completed_cleared:
                     await manager.broadcast_recording_state(trigger_engine.get_active_reminders(), trigger_engine.is_enabled())
 
+            notifier.check_and_notify(acts)
             await broadcast_schedule_update()
         except Exception as e:
             print(f"Error polling schedule: {e}")
@@ -168,6 +170,7 @@ async def record_start(act_name: str):
     act = store.update_actual_start(act_name, current_time)
 
     if act:
+        notifier.notify_act_started(act_name, current_time.strftime("%H:%M"))
         await broadcast_schedule_update()
 
     return {"status": "ok"}
@@ -181,6 +184,7 @@ async def record_end(act_name: str):
     act = store.update_actual_end(act_name, current_time)
 
     if act:
+        notifier.notify_act_ended(act_name, current_time.strftime("%H:%M"))
         await broadcast_schedule_update()
 
     return {"status": "ok"}
