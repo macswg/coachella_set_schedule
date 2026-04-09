@@ -520,7 +520,15 @@ body {
     /* Now Playing Section - Mobile */
     .now-playing-section {
         padding: 16px;
-        margin-bottom: 16px;
+        margin-bottom: 4px;
+    }
+
+    .header {
+        margin-bottom: 4px;
+    }
+
+    #recording-banners:not(:empty) {
+        margin-bottom: 4px;
     }
 
     .now-playing,
