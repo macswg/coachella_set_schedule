@@ -82,9 +82,9 @@ coachella_set_schedule/
 ├── main.py              # FastAPI app entry point, background polling
 ├── requirements.txt     # Python dependencies
 ├── .env.example         # Environment variables template
-├── VERSION              # App version string (e.g. 1.0.6), read at startup
+├── VERSION              # App version string (e.g. 1.0.7), read at startup
 ├── app/
-│   ├── config.py        # Settings from environment (includes APP_VERSION)
+│   ├── config.py        # Settings from environment (includes APP_VERSION, WEATHER_URL)
 │   ├── models.py        # Pydantic models (Act, Schedule)
 │   ├── slip.py          # Slip calculation logic
 │   ├── store.py         # In-memory mock data (development)
@@ -173,6 +173,17 @@ Notifications fired by `app/notifier.py`:
 | Operator marks set complete | "Set complete: {act}" | default |
 
 Time-based notifications are checked each poll cycle (every 30s). A 45-second window is used to ensure the notification fires within one cycle of the target time. Each act fires each notification type at most once per server session.
+
+## WeatherLink Weather Display
+
+Set `WEATHER_URL` in `.env` to a WeatherLink embeddable getData endpoint to enable live weather in the header. Leave empty to hide the weather display entirely.
+
+- **Endpoint format** — `https://www.weatherlink.com/embeddablePage/getData/{embeddable-page-id}`
+- **Displayed fields** — temperature (°F), wind speed + direction, gusts
+- **"As of" timestamp** — `lastReceived` from the API, formatted as `M/D H:MMam/pm` in the configured timezone
+- **Poll interval** — every 3 minutes client-side via `pollWeather()` in `index.html`
+- **Backend proxy** — `GET /api/weather` in `main.py` fetches WeatherLink and returns a cleaned subset of fields; all network errors are silently swallowed
+- **Placement** — header left column, below the "Live Data" server status indicator
 
 ## Offline Resilience
 
