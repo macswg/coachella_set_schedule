@@ -149,7 +149,7 @@ function scheduleApp() {
             setInterval(() => this.pollKiProStatus(), 5000);
             {% if weather_configured %}
             this.pollWeather();
-            setInterval(() => this.pollWeather(), 300000);
+            setInterval(() => this.pollWeather(), 180000);
             {% endif %}
             this.setupBrightnessListener();
             document.body.addEventListener('htmx:wsAfterMessage', () => this.updateTime());
