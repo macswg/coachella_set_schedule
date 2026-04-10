@@ -14,7 +14,8 @@
             </div>
             {% if weather_configured %}
             <div class="weather-display" x-show="weatherTemp !== null">
-                <span class="weather-value" x-text="weatherTemp + '°F / ' + weatherWind"></span>
+                <span class="weather-value" x-text="weatherTemp + '°F'"></span>
+                <span class="weather-value" x-text="weatherWind"></span>
                 <span class="weather-asof" x-show="weatherAsOf" x-text="'as of ' + weatherAsOf"></span>
             </div>
             {% endif %}
