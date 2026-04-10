@@ -104,6 +104,25 @@ body {
     margin-bottom: 8px;
 }
 
+.weather-display {
+    margin-top: 6px;
+}
+
+
+.weather-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.weather-asof {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
 .slip-warning .slip-value {
     color: var(--variance-late);
 }
@@ -506,6 +525,7 @@ body {
 
     .slip-display {
         display: inline-block;
+        margin-right: 16px;
     }
 
     .slip-label,

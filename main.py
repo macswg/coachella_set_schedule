@@ -116,6 +116,7 @@ def get_template_context(request: Request = None) -> dict:
         "next_show": store.get_next_show(),
         "app_version": APP_VERSION,
         "kipro_configured": bool(settings.KIPRO_IP),
+        "weather_configured": bool(settings.WEATHER_URL),
     }
 
 
@@ -330,6 +331,32 @@ async def kipro_stop():
     from app import recorder
     recorder.stop_recording("manual")
     return {"status": "ok"}
+
+
+@app.get("/api/weather")
+async def get_weather():
+    """Fetch current weather from the configured WeatherLink endpoint."""
+    import json
+    import urllib.request
+
+    def _fetch():
+        try:
+            with urllib.request.urlopen(settings.WEATHER_URL, timeout=5) as resp:
+                data = json.loads(resp.read().decode())
+            return {
+                "temperature": data.get("temperature"),
+                "wind": data.get("wind"),
+                "gust": data.get("gust"),
+                "windDirection": data.get("windDirection"),
+                "humidity": data.get("humidity"),
+                "windUnits": data.get("windUnits", "mph"),
+                "tempUnits": "°F",
+                "lastReceived": data.get("lastReceived"),
+            }
+        except Exception as e:
+            return {"error": str(e)}
+
+    return await asyncio.to_thread(_fetch)
 
 
 @app.get("/api/kipro/status")

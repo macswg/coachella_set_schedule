@@ -42,6 +42,9 @@ class Settings:
     # ntfy.sh push notifications
     NTFY_URL: str = os.getenv("NTFY_URL", "")
 
+    # WeatherLink weather data (optional)
+    WEATHER_URL: str = os.getenv("WEATHER_URL", "")
+
     # Art-Net configuration
     ARTNET_ENABLED: bool = os.getenv("ARTNET_ENABLED", "false").lower() == "true"
     ARTNET_PORT: int = int(os.getenv("ARTNET_PORT", "6454"))

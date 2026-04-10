@@ -12,6 +12,12 @@
                 <span class="server-status-dot" :class="{ 'offline': !serverOnline }"></span>
                 <span class="server-status-label" :style="serverOnline ? 'color: #44ff44' : 'color: #ff4444'" x-text="serverOnline ? 'Live Data' : 'Offline Data - DO NOT REFRESH'"></span>
             </div>
+            {% if weather_configured %}
+            <div class="weather-display" x-show="weatherTemp !== null">
+                <span class="weather-value" x-text="weatherTemp + '°F / ' + weatherWind"></span>
+                <span class="weather-asof" x-show="weatherAsOf" x-text="'as of ' + weatherAsOf"></span>
+            </div>
+            {% endif %}
         </div>
         <div class="header-center">
             <div class="current-time" x-text="currentTime"></div>
@@ -108,6 +114,9 @@ function scheduleApp() {
         recordingEnabled: false,
         kiproRolling: null,
         _activeActNames: [],
+        weatherTemp: null,
+        weatherWind: '',
+        weatherAsOf: '',
         timeOverride: '',
         frozenTime: null,
         nextDay: false,
@@ -138,6 +147,10 @@ function scheduleApp() {
             this.fetchBrightness();
             this.pollKiProStatus();
             setInterval(() => this.pollKiProStatus(), 5000);
+            {% if weather_configured %}
+            this.pollWeather();
+            setInterval(() => this.pollWeather(), 300000);
+            {% endif %}
             this.setupBrightnessListener();
             document.body.addEventListener('htmx:wsAfterMessage', () => this.updateTime());
             document.body.addEventListener('htmx:wsOpen', () => { this.serverOnline = true; });
@@ -161,6 +174,30 @@ function scheduleApp() {
             } catch (e) {
                 // silently ignore — Ki Pro may not be on network
             }
+        },
+
+        async pollWeather() {
+            try {
+                const res = await fetch('/api/weather');
+                const d = await res.json();
+                if (d.error) return;
+                this.weatherTemp = d.temperature;
+                const dir = this._degreesToCompass(d.windDirection);
+                const gustStr = d.gust && d.gust !== d.wind ? `, gusts ${d.gust}` : '';
+                this.weatherWind = `${d.wind} ${d.windUnits} ${dir}${gustStr}`;
+                if (d.lastReceived) {
+                    const t = new Date(d.lastReceived);
+                    const mo = t.toLocaleString('en-US', { month: 'numeric', timeZone: '{{ timezone }}' });
+                    const dy = t.toLocaleString('en-US', { day: 'numeric', timeZone: '{{ timezone }}' });
+                    const hr = t.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: '{{ timezone }}' });
+                    this.weatherAsOf = `${mo}/${dy} ${hr.replace(' ', '').toLowerCase()}`;
+                }
+            } catch (e) {}
+        },
+
+        _degreesToCompass(deg) {
+            const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+            return dirs[Math.round(deg / 22.5) % 16];
         },
 
         async fetchBrightness() {
