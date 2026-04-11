@@ -907,6 +907,35 @@ body {
     cursor: not-allowed;
 }
 
+/* End-of-Show Rows */
+.act-end-of-show {
+    border-left: 3px solid #9664ff;
+    opacity: 0.7;
+}
+
+.act-endofshow-label {
+    font-size: 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #9664ff;
+}
+
+/* End-of-Show card in now-playing section */
+.end-of-show-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 20px;
+    margin: -20px;
+    background: linear-gradient(135deg, rgba(150, 100, 255, 0.15) 0%, rgba(150, 100, 255, 0.05) 100%);
+    border-radius: 12px;
+}
+
+.end-of-show-card .np-label {
+    color: #9664ff;
+}
+
 /* Load-In Rows */
 .act-loadin {
     border-left: 3px solid var(--text-muted);

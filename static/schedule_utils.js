@@ -31,7 +31,7 @@ function normalizeActTimes(currentSecs, acts) {
     // If any acts were pushed past midnight and current time looks like early morning
     // (before 6am), treat current time as next day too.
     const maxStart = Math.max(0, ...acts.filter(a => a.scheduledStart !== null).map(a => a.scheduledStart));
-    if (maxStart > 86400 && currentSecs < 21600) {
+    if (maxStart > 86400 && currentSecs < 18000) {
         currentSecs += 86400;
     }
     return currentSecs;

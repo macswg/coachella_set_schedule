@@ -44,6 +44,26 @@ def _time_to_secs(t) -> int:
     return t.hour * 3600 + t.minute * 60 + t.second
 
 
+def _normalize_act_start_secs(acts: list[Act]) -> dict[str, int]:
+    """Walk acts in schedule order, bumping post-midnight start times past 86400.
+
+    Mirrors client-side normalizeActTimes() logic so trigger windows are always
+    evaluated in show-order time rather than raw clock time.  A show that runs
+    from 22:00 to 02:00 produces normalized seconds like 79200, 82800, 86400,
+    90000 instead of 79200, 82800, 0, 3600, which lets simple range comparisons
+    work without any modulo gymnastics.
+    """
+    result: dict[str, int] = {}
+    prev_secs = 0
+    for act in acts:
+        secs = _time_to_secs(act.scheduled_start)
+        if prev_secs > 0 and secs < prev_secs - 3600:
+            secs += 86400
+        result[act.act_name] = secs
+        prev_secs = secs
+    return result
+
+
 def check_and_fire(acts: list[Act]) -> list[str]:
     """
     Fire start_recording() for any acts newly entering their trigger window.
@@ -56,31 +76,28 @@ def check_and_fire(acts: list[Act]) -> list[str]:
     pre_secs = settings.RECORDING_PRE_START_MINUTES * 60
     newly_triggered = []
 
+    # Normalize act start times so post-midnight acts have secs > 86400.
+    # This eliminates the need for modulo-based midnight-crossing logic.
+    normalized = _normalize_act_start_secs(acts)
+    max_start = max(normalized.values(), default=0)
+    # If the show extends past midnight and we're currently in the early-morning
+    # window (before 6am), treat now as next-day time too.
+    if max_start > 86400 and now_secs < 18000:  # treat as same show until 5am
+        now_secs += 86400
+
     for act in acts:
-        if act.is_loadin or act.is_ondeck or act.is_changeover or act.is_complete():
+        if act.is_loadin or act.is_ondeck or act.is_changeover or act.is_complete() or act.is_end_of_show:
             continue
         if settings.RECORDING_ACT_PREFIX and not act.act_name.startswith(settings.RECORDING_ACT_PREFIX):
             continue
         if act.act_name in _triggered:
             continue
 
-        start_secs = _time_to_secs(act.scheduled_start)
+        start_secs = normalized.get(act.act_name, _time_to_secs(act.scheduled_start))
         trigger_secs = start_secs - pre_secs
-        window_end = (start_secs + _TRIGGER_GRACE_SECONDS) % 86400
+        window_end = start_secs + _TRIGGER_GRACE_SECONDS
 
-        if trigger_secs < 0:
-            trigger_secs += 86400
-
-        # Only fire within [trigger_secs, start + grace], handling midnight wrap.
-        # Without the upper bound, a post-midnight act's tiny trigger_secs would
-        # match any late-evening now_secs (e.g. 23:00 >= 00:25 in raw seconds).
-        if trigger_secs <= window_end:
-            in_window = trigger_secs <= now_secs <= window_end
-        else:
-            # Window crosses midnight (e.g. trigger at 23:55, window_end at 01:30)
-            in_window = now_secs >= trigger_secs or now_secs <= window_end
-
-        if in_window:
+        if trigger_secs <= now_secs <= window_end:
             try:
                 recorder.start_recording(act.act_name)
             except Exception as e:

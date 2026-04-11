@@ -44,7 +44,7 @@ The app reads data by column position (not header names) to handle sheets with n
 | Actual time off | G (col 7) | Recorded end time (filled by app) |
 | Screentime total | H (col 8) | On Deck screentime written as `H:MM:SS` (filled by app) |
 
-Header row is expected at row 5, data starts at row 6. Rows without valid scheduled start/end times are skipped. **On Deck rows must have a `scheduled_end`** — this is used to auto-hide the row once local time passes that value. Time values are parsed flexibly and support `HH:MM`, `HH:MM:SS`, `H:MM AM/PM`, and `H:MM:SS AM/PM` formats.
+Header row is expected at row 5, data starts at row 6. Rows without valid scheduled start/end times are skipped. **On Deck rows must have a `scheduled_end`** — this is used to auto-hide the row once local time passes that value. Time values are parsed flexibly and support `HH:MM`, `HH:MM:SS`, `H:MM AM/PM`, and `H:MM:SS AM/PM` formats. **END OF SHOW rows** need no time — the parser infers the start time from the previous act's `scheduled_end`.
 
 ## MVP Scope
 
@@ -82,7 +82,7 @@ coachella_set_schedule/
 ├── main.py              # FastAPI app entry point, background polling
 ├── requirements.txt     # Python dependencies
 ├── .env.example         # Environment variables template
-├── VERSION              # App version string (e.g. 1.0.7), read at startup
+├── VERSION              # App version string (e.g. 1.0.9), read at startup
 ├── app/
 │   ├── config.py        # Settings from environment (includes APP_VERSION, WEATHER_URL)
 │   ├── models.py        # Pydantic models (Act, Schedule)
@@ -108,6 +108,7 @@ coachella_set_schedule/
     ├── test_models.py        # Act model unit tests
     ├── test_slip.py          # Slip calculation unit tests
     ├── test_midnight.py      # Midnight rollover tests
+    ├── test_triggers.py      # Recording trigger engine tests (normalization, midnight, skips)
     └── ...                   # API, store, and sheets tests
 ```
 
@@ -128,14 +129,15 @@ The app polls Google Sheets every 30 seconds (configurable via `POLL_INTERVAL_SE
 - Slip formula: `projected_start[i] = scheduled_start[i] + slip`
 - Conflict resolution: last-write-wins with timestamp
 - Timezone: Festival local time only (PDT for Coachella)
-- **Midnight rollover:** Acts past midnight (e.g. `01:00`) are stored as plain `time` objects; rollover is handled at comparison time. Server-side: `models.py` adds `timedelta(days=1)` when end < start. Client-side: `normalizeActTimes()` walks acts in sheet order and bumps any time that drops more than 1 hour below the previous act's time. Acts must be in chronological order in the sheet for this to work correctly.
+- **Midnight rollover:** Acts past midnight (e.g. `01:00`) are stored as plain `time` objects; rollover is handled at comparison time. Server-side: `models.py` adds `timedelta(days=1)` when end < start. Client-side: `normalizeActTimes()` walks acts in sheet order and bumps any time that drops more than 1 hour below the previous act's time. Acts must be in chronological order in the sheet for this to work correctly. The trigger engine (`triggers.py`) applies the same normalization via `_normalize_act_start_secs()`. Both use a **5am reset threshold**: times before 5am on a midnight-crossing show are treated as same-show (next-day) time; after 5am the schedule resets to normal day context.
+- **END OF SHOW row:** A sheet row whose artist name is exactly `END` or `END OF SHOW` (case-insensitive) marks the end of the show. The `is_end_of_show` computed field on `Act` identifies these rows. They require no scheduled time — the parser infers one from the previous act's `scheduled_end`. The now-playing section switches to "END OF SHOW / Have a Great Night" once the row's scheduled time is reached, or immediately if the row has no time. The loop stops at END OF SHOW and never processes acts below it in the sheet (preventing next-day acts from appearing as "Up Next").
 
 ## Client-Side Timer Architecture
 
 The `updateTime()` method runs every second and is the single entry point for all per-tick logic. It queries `.act-row` elements once, parses their `data-*` attributes into a shared `acts` array, then passes `(currentSecs, acts)` to:
 - `calculateSlip()` — computes accumulated slip from actual vs scheduled times
 - `checkActAlerts()` — applies flash/warning CSS classes; suppresses `flash-warning` on act rows when the up-next section is already pulsing (act starting within 2 minutes) to avoid competing animations
-- `updateNowPlaying()` — renders the now-playing/up-next banner; adds `starting-soon` pulse class when next act is ≤2 minutes away; updates countdown text in-place to avoid restarting CSS animations
+- `updateNowPlaying()` — renders the now-playing/up-next banner; adds `starting-soon` pulse class when next act is ≤2 minutes away; updates countdown text in-place to avoid restarting CSS animations. The **Up Next** card only appears if the show is already underway (any act completed) or the next act starts within 60 minutes — prevents showing a distant first act at 8am. When an END OF SHOW row is reached in the sheet loop, the banner switches to the **END OF SHOW / Have a Great Night** card and no acts below it are considered.
 - `updateCountdowns()` — shows `[Starts in X:XX]` for future acts, hidden once started or past scheduled time
 - `updateOnDeckRows()` — adds `act-complete` to On Deck rows once local time passes their `scheduled_end`, hiding them via the same `hide-completed` mechanism as regular acts
 - `updateLoadInRows()` — adds `act-complete` to Load In rows 1 hour after their `scheduled_start`
@@ -152,7 +154,7 @@ The app version is stored in the `VERSION` file at the repo root. It is read at 
 
 Set `KIPRO_IP` in `.env` to enable. The app communicates with the Ki Pro via its HTTP API (`/config?action=...`).
 
-- **Automatic triggers** — `app/triggers.py` fires `start_recording()` a configurable number of minutes before a scheduled act start. Toggled live via the "Rec Triggers: ON/OFF" button on `/edit`.
+- **Automatic triggers** — `app/triggers.py` fires `start_recording()` a configurable number of minutes before a scheduled act start. Toggled live via the "Rec Triggers: ON/OFF" button on `/edit`. Trigger windows are computed using `_normalize_act_start_secs()` so midnight-crossing shows work correctly without modulo arithmetic.
 - **Manual record/stop buttons** — `/edit` shows a red record button and a stop button in the schedule header (only when `KIPRO_IP` is set). Only one is visible at a time, toggled by the actual deck state.
 - **Transport state polling** — the frontend polls `GET /api/kipro/status` every 5 seconds. This queries `eParamID_TransportState` on the Ki Pro; value `"2"` = recording. The REC banner in `/edit` is driven by this actual deck state (not just trigger state). If the deck is rolling with no active trigger, a generic "Deck Rolling" banner is shown.
 - **Manual API endpoints** — `POST /api/kipro/record` and `POST /api/kipro/stop` send commands directly to the deck.

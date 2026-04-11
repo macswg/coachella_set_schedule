@@ -25,7 +25,7 @@ def calculate_slip(acts: list[Act], current_time: Optional[time] = None) -> int:
     slip = 0
 
     for act in acts:
-        if act.is_loadin or act.is_ondeck:
+        if act.is_loadin or act.is_ondeck or act.is_end_of_show:
             continue
         if act.actual_end:
             # Act completed - check if it ran late

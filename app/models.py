@@ -32,6 +32,12 @@ class Act(BaseModel):
         """Returns True if this is a changeover row (no recording trigger)."""
         return 'changeover' in self.act_name.lower()
 
+    @computed_field
+    @property
+    def is_end_of_show(self) -> bool:
+        """Returns True if this is an end-of-show marker row (e.g. 'END' or 'END OF SHOW')."""
+        return self.act_name.lower().strip() in ('end', 'end of show')
+
     @staticmethod
     def _duration_seconds(start: time, end: time) -> int:
         """Elapsed seconds from start to end, handling midnight crossover."""

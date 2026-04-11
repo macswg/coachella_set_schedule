@@ -1,4 +1,4 @@
-<div class="act-row {% if act.is_loadin %}act-loadin act-pending{% elif act.is_in_progress() %}act-in-progress{% elif act.is_complete() %}act-complete{% else %}act-pending{% endif %}"
+<div class="act-row {% if act.is_end_of_show %}act-end-of-show{% elif act.is_loadin %}act-loadin act-pending{% elif act.is_in_progress() %}act-in-progress{% elif act.is_complete() %}act-complete{% else %}act-pending{% endif %}"
      id="act-{{ act.act_name | replace(' ', '-') }}"
      data-scheduled-start="{{ act.scheduled_start.strftime('%H:%M') }}"
      data-scheduled-end="{{ act.scheduled_end.strftime('%H:%M') if act.scheduled_end else '' }}"
@@ -6,10 +6,22 @@
      data-actual-end="{{ act.actual_end.strftime('%H:%M:%S') if act.actual_end else '' }}"
      data-is-loadin="{{ 'true' if act.is_loadin else 'false' }}"
      data-is-ondeck="{{ 'true' if act.is_ondeck else 'false' }}"
+     data-is-endofshow="{{ 'true' if act.is_end_of_show else 'false' }}"
      data-screentime-total="{{ act.screentime_total_seconds }}"
      data-screentime-session-start="{{ act.screentime_session_start.strftime('%H:%M:%S') if act.screentime_session_start else '' }}">
 
-{% if act.is_loadin %}
+{% if act.is_end_of_show %}
+    {# End-of-show marker: display only, no buttons #}
+    <div class="act-status-indicator">
+        <span class="status-dot status-pending"></span>
+    </div>
+    <div class="act-info">
+        <div class="act-name act-endofshow-label">{{ act.act_name }}</div>
+        <div class="act-times">
+            <span class="scheduled-times">{{ act.scheduled_start.strftime('%H:%M') }}</span>
+        </div>
+    </div>
+{% elif act.is_loadin %}
     {# Load-in row: informational only, no buttons #}
     <div class="act-status-indicator">
         <span class="status-dot status-pending"></span>

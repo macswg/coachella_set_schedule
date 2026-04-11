@@ -150,17 +150,32 @@ def get_schedule() -> list[Act]:
     }
 
     acts = []
+    last_scheduled_end: Optional[time] = None  # used to infer END OF SHOW time when blank
     for row in data_rows:
         act_name = _get_cell(row, COL_ARTIST_NAME)
         scheduled_start = _parse_time(_get_cell(row, COL_SCHEDULED_START))
         scheduled_end = _parse_time(_get_cell(row, COL_SCHEDULED_END))
 
         # Detect informational rows (no scheduled_end required)
-        is_no_end_row = act_name and ('load in' in act_name.lower() or 'on deck' in act_name.lower() or 'stage time' in act_name.lower())
+        is_end_of_show_row = bool(act_name and act_name.lower().strip() in ('end', 'end of show'))
+        is_no_end_row = act_name and (
+            'load in' in act_name.lower() or
+            'on deck' in act_name.lower() or
+            'stage time' in act_name.lower() or
+            is_end_of_show_row
+        )
+
+        # END OF SHOW with no time: inherit the previous act's scheduled_end so
+        # the row is placed immediately after the last set in the timeline.
+        if is_end_of_show_row and not scheduled_start and last_scheduled_end:
+            scheduled_start = last_scheduled_end
 
         # Skip rows without act name or required scheduled times
         if not act_name or not scheduled_start or (not scheduled_end and not is_no_end_row):
             continue
+
+        if scheduled_end:
+            last_scheduled_end = scheduled_end
 
         # Prefer in-memory cached total (avoids stale reads right after a write)
         screentime_total = _screentime_totals.get(
