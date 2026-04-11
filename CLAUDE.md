@@ -73,6 +73,9 @@ python -m pytest -k "midnight"            # by keyword
 # Preview:      http://localhost:8000/preview  (operator + time-of-day override, +24h toggle for post-midnight)
 # Stage board:  http://localhost:8000/stage    (large-format clock + up-next display)
 # LAN: http://<your-ip>:8000
+
+# Force all connected browser tabs to hard-reload (useful after a container rebuild)
+curl -X POST http://localhost:8000/api/reload
 ```
 
 ## Project Structure

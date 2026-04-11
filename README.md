@@ -200,6 +200,7 @@ The app polls Google Sheets every 30 seconds (configurable via `POLL_INTERVAL_SE
 | `POST` | `/acts/{name}/end` | Record actual end time |
 | `POST` | `/acts/{name}/clear` | Clear actual times for an act |
 | `POST` | `/api/reset` | Clear all actual times (disabled when `USE_GOOGLE_SHEETS=true`) |
+| `POST` | `/api/reload` | Force all connected clients to hard-reload the page |
 | `GET` | `/api/brightness` | Current Art-Net brightness value |
 | `WS` | `/ws?mode=view\|edit` | WebSocket connection |
 
@@ -246,6 +247,14 @@ coachella_set_schedule/
 **Time override:** On `/preview`, use the time input in the header to freeze the clock at a specific time. Toggle **+24h** to simulate times past midnight (e.g. enter `01:30` and toggle +24h to preview 1:30am). Click "Live" to resume real-time.
 
 **Reset endpoint:** `POST /api/reset` clears all actual times and broadcasts the update — useful for demo resets between tests. Disabled (button greyed out) when `USE_GOOGLE_SHEETS=true`.
+
+**Force client reload:** `POST /api/reload` broadcasts a hard-reload command to every connected browser tab via WebSocket. Useful after a container rebuild to ensure all clients pick up new CSS/JS without manually refreshing. Static files are also cache-busted by app version (`styles.css?v=X.X.X`) so bumping `VERSION` + rebuilding guarantees fresh assets.
+
+```bash
+curl -X POST http://localhost:8000/api/reload
+# or on LAN:
+curl -X POST http://<your-ip>:8000/api/reload
+```
 
 **Rec Triggers toggle:** The **Rec Triggers** button on `/edit` enables or disables automatic time recording triggers.
 
