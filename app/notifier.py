@@ -50,7 +50,7 @@ def check_and_notify(acts: list[Act]) -> None:
     now_secs = _time_to_secs(now)
 
     for act in acts:
-        if act.is_loadin or act.is_ondeck or act.is_changeover:
+        if act.is_loadin or act.is_ondeck or act.is_changeover or act.is_preshow:
             continue
 
         name = act.act_name

@@ -216,7 +216,12 @@ function scheduleApp() {
             document.body.addEventListener('htmx:wsBeforeMessage', function(event) {
                 try {
                     const data = JSON.parse(event.detail.message);
-                    if (data.type === 'brightness') {
+                    if (data.type === 'reload') {
+                        const url = new URL(window.location.href);
+                        url.searchParams.set('_v', Date.now());
+                        window.location.replace(url.toString());
+                        event.preventDefault();
+                    } else if (data.type === 'brightness') {
                         self.brightness = data.value;
                         event.preventDefault();
                     } else if (data.type === 'recording') {
@@ -310,6 +315,7 @@ function scheduleApp() {
                     isLoadIn: row.dataset.isLoadin === 'true',
                     isOnDeck: row.dataset.isOndeck === 'true',
                     isEndOfShow: row.dataset.isEndofshow === 'true',
+                    isPreshow: row.dataset.isPreshow === 'true',
                     screentimeTotal: parseInt(row.dataset.screentimeTotal || '0'),
                     screentimeSessionStart: row.dataset.screentimeSessionStart
                         ? timeToSeconds(row.dataset.screentimeSessionStart)
@@ -332,7 +338,7 @@ function scheduleApp() {
             let slip = 0;
 
             for (const act of acts) {
-                if (act.isLoadIn || act.isOnDeck) continue;
+                if (act.isLoadIn || act.isOnDeck || act.isPreshow) continue;
                 if (act.actualEnd !== null) {
                     // Completed act: slip is how early/late it ended
                     slip = act.actualEnd - act.scheduledEnd;
@@ -361,7 +367,7 @@ function scheduleApp() {
             );
 
             for (const act of acts) {
-                if (act.isLoadIn || act.isOnDeck || act.isEndOfShow) continue;
+                if (act.isLoadIn || act.isOnDeck || act.isEndOfShow || act.isPreshow) continue;
                 act.row.classList.remove('flash-warning', 'flash-danger', 'act-live', 'act-live-ending', 'act-missed');
 
                 if (!act.hasActualStart && !act.hasActualEnd && currentSecs >= act.scheduledEnd) {
@@ -441,7 +447,7 @@ function scheduleApp() {
                         startSecs: act.scheduledStart,
                         endSecs: act.scheduledEnd,
                         isChangeover: act.isOnDeck ? false : seenAnyAct,
-                        isPreshow: !act.isOnDeck && actName.includes('Preshow'),
+                        isPreshow: act.isPreshow,
                         isOnDeck: act.isOnDeck,
                     };
                 }
@@ -453,14 +459,51 @@ function scheduleApp() {
                         isChangeover: act.isOnDeck ? false : seenAnyAct,
                         isOnDeck: act.isOnDeck,
                         isEndOfShow: false,
+                        isPreshow: act.isPreshow,
                     };
                 }
 
-                if (!act.isOnDeck) seenAnyAct = true;
+                if (!act.isOnDeck && !act.isPreshow) seenAnyAct = true;
             }
 
             let startingSoon = false;
             let isEndOfShow = false;
+
+            // Update DOM — avoid rebuilding innerHTML every tick to preserve CSS animations
+            const existingDiv = section.firstElementChild;
+
+            // Preshow active: render combined preshow + up-next card then bail out
+            if (!nowPlaying && shouldBePlayingNow?.isPreshow) {
+                const nextName = nextUpcoming?.name || null;
+                const secsUntilNext = nextUpcoming ? nextUpcoming.startSecs - currentSecs : null;
+                const nextCountdown = secsUntilNext !== null ? formatCountdown(secsUntilNext) : '';
+                const preshowArtist = shouldBePlayingNow.name;
+                const sameCard = existingDiv?.classList.contains('preshow-playing')
+                    && existingDiv.querySelector('.np-preshow-artist')?.textContent === preshowArtist;
+                if (sameCard) {
+                    const cd = existingDiv.querySelector('.np-countdown');
+                    if (cd) cd.textContent = nextCountdown;
+                } else {
+                    section.innerHTML = `
+                        <div class="preshow-playing">
+                            <div class="np-preshow-header">
+                                <span class="np-preshow-tag">Preshow</span>
+                                <span class="np-preshow-artist">${preshowArtist}</span>
+                            </div>
+                            ${nextName ? `
+                            <div class="np-preshow-upnext">
+                                <span class="np-label">Up Next</span>
+                                <span class="np-artist">${nextName}</span>
+                                <div class="np-countdown-wrap">
+                                    <span class="np-countdown">${nextCountdown}</span>
+                                    <span class="np-suffix">until start</span>
+                                </div>
+                            </div>` : ''}
+                        </div>`;
+                }
+                return;
+            }
+
             if (!nowPlaying && shouldBePlayingNow) {
                 upNext = shouldBePlayingNow.name;
                 isChangeover = shouldBePlayingNow.isChangeover;
@@ -483,6 +526,7 @@ function scheduleApp() {
                 if (showUpNext) {
                     upNext = nextUpcoming.name;
                     isEndOfShow = nextUpcoming.isEndOfShow || false;
+                    isPreshow = nextUpcoming.isPreshow || false;
                     countdown = formatCountdown(secsUntilStart);
                     isChangeover = nextUpcoming.isChangeover;
                     isOnDeck = nextUpcoming.isOnDeck;
@@ -490,8 +534,6 @@ function scheduleApp() {
                 }
             }
 
-            // Update DOM — avoid rebuilding innerHTML every tick to preserve CSS animations
-            const existingDiv = section.firstElementChild;
             if (nowPlaying) {
                 const cl = `now-playing${isOvertime ? ' is-overtime' : ''}`;
                 if (existingDiv?.classList.contains('now-playing') && existingDiv.querySelector('.np-artist')?.textContent === nowPlaying) {
@@ -519,18 +561,21 @@ function scheduleApp() {
                         </div>`;
                 }
             } else if (upNext) {
-                const cl = `up-next${isLateStart ? ' is-late-start' : ''}${isChangeover ? ' is-changeover' : ''}${isOnDeck ? ' is-on-deck' : ''}`;
+                const cl = `up-next${isLateStart ? ' is-late-start' : ''}${isChangeover ? ' is-changeover' : ''}${isOnDeck ? ' is-on-deck' : ''}${isPreshow ? ' is-preshow' : ''}`;
                 const sameCard = existingDiv?.classList.contains('up-next')
                     && existingDiv.querySelector('.np-artist')?.textContent === upNext
                     && existingDiv.classList.contains('is-late-start') === isLateStart
                     && existingDiv.classList.contains('is-changeover') === isChangeover
-                    && existingDiv.classList.contains('is-on-deck') === isOnDeck;
+                    && existingDiv.classList.contains('is-on-deck') === isOnDeck
+                    && existingDiv.classList.contains('is-preshow') === isPreshow;
                 if (sameCard) {
                     existingDiv.classList.toggle('starting-soon', startingSoon);
                     const cd = existingDiv.querySelector('.np-countdown');
                     if (cd) cd.textContent = countdown;
                     const sf = existingDiv.querySelector('.np-suffix');
                     if (sf) sf.textContent = countdownSuffix;
+                    const lbl = existingDiv.querySelector('.np-label');
+                    if (lbl && isOnDeck) lbl.textContent = countdownSuffix === 'remaining' ? 'On Deck' : 'Up Next';
                 } else if (isOnDeck) {
                     section.innerHTML = `
                         <div class="${cl}">
@@ -546,6 +591,7 @@ function scheduleApp() {
                     section.innerHTML = `
                         <div class="${cl}${startingSoon ? ' starting-soon' : ''}">
                             ${isChangeover ? '<span class="np-changeover">CHANGEOVER</span>' : ''}
+                            ${isPreshow ? '<span class="np-preshow-indicator">PRESHOW</span>' : ''}
                             ${(!isChangeover || isLateStart) ? `<span class="np-label">${isLateStart ? lateLabel : 'Up Next'}</span>` : ''}
                             <span class="np-artist">${upNext}</span>
                             <div class="np-countdown-wrap">
@@ -605,6 +651,17 @@ function scheduleApp() {
             for (const act of acts) {
                 if (!act.isLoadIn) continue;
                 if (act.scheduledStart !== null && currentSecs >= act.scheduledStart + 3600) {
+                    act.row.classList.remove('act-pending');
+                    act.row.classList.add('act-complete');
+                } else {
+                    act.row.classList.remove('act-complete');
+                    act.row.classList.add('act-pending');
+                }
+            }
+            // Preshow: fade out once scheduled_end is reached
+            for (const act of acts) {
+                if (!act.isPreshow) continue;
+                if (act.scheduledEnd !== null && currentSecs >= act.scheduledEnd) {
                     act.row.classList.remove('act-pending');
                     act.row.classList.add('act-complete');
                 } else {

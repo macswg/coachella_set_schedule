@@ -214,6 +214,15 @@ body {
     border-radius: 12px;
 }
 
+.np-preshow-indicator {
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--accent-secondary);
+    opacity: 0.7;
+}
+
 .np-changeover {
     font-size: 1.25rem;
     font-weight: 700;
@@ -934,6 +943,71 @@ body {
 
 .end-of-show-card .np-label {
     color: #9664ff;
+}
+
+/* Preshow now-playing card */
+.preshow-playing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 20px;
+    margin: -20px;
+    background: linear-gradient(135deg, rgba(78, 205, 196, 0.12) 0%, rgba(78, 205, 196, 0.04) 100%);
+    border-radius: 12px;
+}
+
+/* Small muted preshow context header */
+.np-preshow-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.6;
+    margin-bottom: 4px;
+}
+
+.np-preshow-tag {
+    font-size: 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent-secondary);
+    font-weight: 600;
+}
+
+.np-preshow-artist {
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+}
+
+/* Up Next section — primary content */
+.np-preshow-upnext {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+}
+
+.preshow-playing .np-label {
+    color: var(--accent-secondary);
+}
+
+/* Preshow Rows */
+.act-preshow {
+    border-left: 3px solid var(--accent-secondary);
+    opacity: 0.75;
+}
+
+.act-preshow:hover {
+    opacity: 0.9;
+}
+
+.act-preshow-label {
+    font-size: 1rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent-secondary);
 }
 
 /* Load-In Rows */

@@ -12,9 +12,15 @@ function timeToSeconds(timeStr) {
 function normalizeActTimes(currentSecs, acts) {
     // Walk acts in schedule order. If an act's scheduledStart drops more than
     // 1 hour below the previous act's start, it crossed midnight — add 86400.
+    //
+    // Load In rows are intentionally earlier than surrounding stage-time slots
+    // (they load in before the performance) and can appear later in sheet order.
+    // Exclude them from both the bump check and the prevStart baseline so they
+    // don't falsely trigger midnight-crossing detection for real acts.
     let prevStart = 0;
     for (const act of acts) {
         if (act.scheduledStart === null) continue;
+        if (act.isLoadIn) continue;
         if (act.scheduledStart < prevStart - 3600) {
             act.scheduledStart += 86400;
             if (act.scheduledEnd !== null) act.scheduledEnd += 86400;

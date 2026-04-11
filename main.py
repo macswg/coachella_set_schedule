@@ -406,6 +406,13 @@ async def reset_data():
     return {"status": "reset", "acts_cleared": len(acts)}
 
 
+@app.post("/api/reload")
+async def reload_clients():
+    """Force all connected clients to hard-reload the page."""
+    await manager.broadcast_reload()
+    return {"status": "reload sent"}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

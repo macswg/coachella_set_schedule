@@ -38,6 +38,12 @@ class Act(BaseModel):
         """Returns True if this is an end-of-show marker row (e.g. 'END' or 'END OF SHOW')."""
         return self.act_name.lower().strip() in ('end', 'end of show')
 
+    @computed_field
+    @property
+    def is_preshow(self) -> bool:
+        """Returns True if this is a preshow row (no recording trigger, no set buttons)."""
+        return 'preshow' in self.act_name.lower()
+
     @staticmethod
     def _duration_seconds(start: time, end: time) -> int:
         """Elapsed seconds from start to end, handling midnight crossover."""

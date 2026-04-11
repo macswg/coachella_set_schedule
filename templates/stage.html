@@ -231,6 +231,8 @@ function stageApp() {
                     if (cd) cd.textContent = countdown;
                     const sf = existingDiv.querySelector('.np-suffix');
                     if (sf) sf.textContent = countdownSuffix;
+                    const lbl = existingDiv.querySelector('.np-label');
+                    if (lbl && isOnDeck) lbl.textContent = countdownSuffix === 'remaining' ? 'On Deck' : 'Up Next';
                 } else if (isOnDeck) {
                     section.innerHTML = `
                         <div class="${cl}">

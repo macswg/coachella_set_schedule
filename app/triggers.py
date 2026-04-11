@@ -56,6 +56,9 @@ def _normalize_act_start_secs(acts: list[Act]) -> dict[str, int]:
     result: dict[str, int] = {}
     prev_secs = 0
     for act in acts:
+        if act.is_loadin:
+            result[act.act_name] = _time_to_secs(act.scheduled_start)
+            continue
         secs = _time_to_secs(act.scheduled_start)
         if prev_secs > 0 and secs < prev_secs - 3600:
             secs += 86400
@@ -86,7 +89,7 @@ def check_and_fire(acts: list[Act]) -> list[str]:
         now_secs += 86400
 
     for act in acts:
-        if act.is_loadin or act.is_ondeck or act.is_changeover or act.is_complete() or act.is_end_of_show:
+        if act.is_loadin or act.is_ondeck or act.is_changeover or act.is_complete() or act.is_end_of_show or act.is_preshow:
             continue
         if settings.RECORDING_ACT_PREFIX and not act.act_name.startswith(settings.RECORDING_ACT_PREFIX):
             continue
