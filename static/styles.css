@@ -358,6 +358,45 @@ body {
     color: var(--text-primary);
 }
 
+.btn-qr {
+    background-color: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 6px 8px;
+    line-height: 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-qr:hover {
+    background-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.qr-modal-box {
+    max-width: 300px;
+    text-align: center;
+}
+
+.qr-canvas {
+    display: flex;
+    justify-content: center;
+    margin: 16px 0 12px;
+}
+
+.qr-canvas img,
+.qr-canvas canvas {
+    border-radius: 8px;
+}
+
+.qr-url {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    word-break: break-all;
+    margin-bottom: 20px;
+}
+
 .schedule-list {
     display: flex;
     flex-direction: column;

@@ -44,7 +44,7 @@ The app reads data by column position (not header names) to handle sheets with n
 | Actual time off | G (col 7) | Recorded end time (filled by app) |
 | Screentime total | H (col 8) | On Deck screentime written as `H:MM:SS` (filled by app) |
 
-Header row is expected at row 5, data starts at row 6. Rows without valid scheduled start/end times are skipped. **On Deck rows must have a `scheduled_end`** — this is used to auto-hide the row once local time passes that value. Time values are parsed flexibly and support `HH:MM`, `HH:MM:SS`, `H:MM AM/PM`, and `H:MM:SS AM/PM` formats. **END OF SHOW rows** need no time — the parser infers the start time from the previous act's `scheduled_end`.
+Header row is expected at row 5, data starts at row 6. Rows without a valid `scheduled_start` are skipped; `scheduled_end` is optional — acts with no end time (e.g. final headliner) are allowed through and handled gracefully. Time values are parsed flexibly and support `HH:MM`, `HH:MM:SS`, `H:MM AM/PM`, and `H:MM:SS AM/PM` formats. **END OF SHOW rows** need no time — the parser infers the start time from the previous act's `scheduled_end`. If no time is available (e.g. the last act had no `scheduled_end`), the END OF SHOW row is included with no scheduled time and only triggers the end-of-show state once the operator marks the last act complete.
 
 ## MVP Scope
 
@@ -124,6 +124,8 @@ To use Google Sheets instead of mock data:
 
 The app polls Google Sheets every 30 seconds (configurable via `POLL_INTERVAL_SECONDS` in `main.py`) and broadcasts updates to all connected clients.
 
+**Multi-show tabs:** Set `SHOW_TABS` to a comma-separated list of sheet tab names (e.g. `W1Shw1,W1Shw2,W2Shw4`). The app starts on the tab named by `GOOGLE_SHEET_TAB`; if that tab is not in the list, it defaults to the first tab. Operators advance to the next show via the "Advance to Next Show" button on `/edit`, which reloads all clients.
+
 ## Key Business Rules
 
 - Published schedule (`scheduled_start`/`scheduled_end`) is authoritative and never auto-modified
@@ -133,7 +135,8 @@ The app polls Google Sheets every 30 seconds (configurable via `POLL_INTERVAL_SE
 - Conflict resolution: last-write-wins with timestamp
 - Timezone: Festival local time only (PDT for Coachella)
 - **Midnight rollover:** Acts past midnight (e.g. `01:00`) are stored as plain `time` objects; rollover is handled at comparison time. Server-side: `models.py` adds `timedelta(days=1)` when end < start. Client-side: `normalizeActTimes()` walks acts in sheet order and bumps any time that drops more than 1 hour below the previous act's time. Acts must be in chronological order in the sheet for this to work correctly. The trigger engine (`triggers.py`) applies the same normalization via `_normalize_act_start_secs()`. Both use a **5am reset threshold**: times before 5am on a midnight-crossing show are treated as same-show (next-day) time; after 5am the schedule resets to normal day context.
-- **END OF SHOW row:** A sheet row whose artist name is exactly `END` or `END OF SHOW` (case-insensitive) marks the end of the show. The `is_end_of_show` computed field on `Act` identifies these rows. They require no scheduled time — the parser infers one from the previous act's `scheduled_end`. The now-playing section switches to "END OF SHOW / Have a Great Night" once the row's scheduled time is reached, or immediately if the row has no time. The loop stops at END OF SHOW and never processes acts below it in the sheet (preventing next-day acts from appearing as "Up Next").
+- **END OF SHOW row:** A sheet row whose artist name is exactly `END` or `END OF SHOW` (case-insensitive) marks the end of the show. The `is_end_of_show` computed field on `Act` identifies these rows. They require no scheduled time — the parser infers one from the previous act's `scheduled_end`. If the END OF SHOW row has no scheduled time (e.g. last act has no `scheduled_end`), the banner switches to "END OF SHOW / Have a Great Night" only once the operator marks the last act complete. The loop stops at END OF SHOW and never processes acts below it in the sheet.
+- **Acts with no `scheduled_end`:** Allowed through the parser. Client-side null guards prevent NaN countdowns and false `act-missed` states. While the last act is live, a secondary "Show ends in X:XX" countdown appears in the now-playing card if an END OF SHOW row with a scheduled time follows it.
 
 ## Client-Side Timer Architecture
 
@@ -144,6 +147,8 @@ The `updateTime()` method runs every second and is the single entry point for al
 - `updateCountdowns()` — shows `[Starts in X:XX]` for future acts, hidden once started or past scheduled time
 - `updateOnDeckRows()` — adds `act-complete` to On Deck rows once local time passes their `scheduled_end`, hiding them via the same `hide-completed` mechanism as regular acts
 - `updateLoadInRows()` — adds `act-complete` to Load In rows 1 hour after their `scheduled_start`
+
+`updateNowPlaying()` also does a second pass after the main loop: if a now-playing act is found, it scans forward to find whether the next item is an END OF SHOW row with a scheduled time, and if so renders a `.np-eos-wrap` secondary countdown ("Show ends in X:XX") inside the now-playing card.
 
 After WebSocket HTML swaps (from Google Sheets polling), `htmx:wsAfterMessage` triggers `updateTime()` to immediately re-apply countdowns and alerts before the browser paints. Use `htmx:wsAfterMessage` (not `htmx:afterSwap` or `htmx:afterSettle`) for flicker-free post-swap updates.
 
@@ -190,6 +195,15 @@ Set `WEATHER_URL` in `.env` to a WeatherLink embeddable getData endpoint to enab
 - **Backend proxy** — `GET /api/weather` in `main.py` fetches WeatherLink and returns a cleaned subset of fields; all network errors are silently swallowed
 - **Placement** — header left column, below the "Live Data" server status indicator
 
+## Access Control & Public URL
+
+- **Edit page auth** — Set `EDIT_PASSWORD` in `.env` to enable HTTP Basic Auth on `GET /edit`. The browser prompts once per session. Only the password is checked; the username field is ignored. Leave empty to disable (LAN-only use).
+- **Public URL / QR code** — Set `PUBLIC_URL` in `.env` (e.g. `https://coachella.pickle.green`) to specify the Cloudflare tunnel address used in the viewer QR code. Falls back to `window.location.origin` if unset. The QR button appears in the schedule header on all pages and generates the code client-side via `qrcodejs`.
+
+## Startup Auto-Reload
+
+Set `AUTO_RELOAD_ON_STARTUP=true` in `.env` to broadcast a hard-reload to all connected clients after server startup (default delay: 15 seconds). Ensures browser tabs pick up new HTML/CSS/JS after a container rebuild without manual intervention. Delay is configurable via `STARTUP_RELOAD_DELAY`. Leave disabled (`false`) in dev to avoid tab thrashing during `--reload` development.
+
 ## Offline Resilience
 
 The app continues to function client-side if the server goes down after the page has loaded — Alpine.js keeps running the clock and all calculations using the last received schedule state. Two mechanisms protect against accidental data loss:
@@ -199,3 +213,5 @@ The app continues to function client-side if the server goes down after the page
 - **`overscroll-behavior: none`** — prevents pull-to-refresh on mobile
 
 Note: a service worker cache was considered but removed — service workers require HTTPS, and this app runs over plain HTTP on LAN.
+
+The app is also accessible externally via a Cloudflare tunnel (`PUBLIC_URL`). The `/edit` page is password-protected when `EDIT_PASSWORD` is set.

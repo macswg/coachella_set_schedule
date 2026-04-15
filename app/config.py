@@ -45,6 +45,12 @@ class Settings:
     # WeatherLink weather data (optional)
     WEATHER_URL: str = os.getenv("WEATHER_URL", "")
 
+    # Edit page password (HTTP Basic Auth). Leave empty to disable auth.
+    EDIT_PASSWORD: str = os.getenv("EDIT_PASSWORD", "")
+
+    # Public URL used for QR code (e.g. Cloudflare tunnel domain). Falls back to window.location.origin if empty.
+    PUBLIC_URL: str = os.getenv("PUBLIC_URL", "")
+
     # Startup hard-reload (opt-in; suppresses in dev by setting to false)
     AUTO_RELOAD_ON_STARTUP: bool = os.getenv("AUTO_RELOAD_ON_STARTUP", "false").lower() == "true"
     STARTUP_RELOAD_DELAY: int = int(os.getenv("STARTUP_RELOAD_DELAY", "15"))

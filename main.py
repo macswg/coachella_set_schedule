@@ -1,12 +1,14 @@
 import asyncio
+import secrets
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from typing import Optional
 from urllib.parse import unquote
 from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -103,6 +105,22 @@ app = FastAPI(title="Festival Schedule Board", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+_http_basic = HTTPBasic(auto_error=False)
+
+
+def _require_edit_auth(credentials: Optional[HTTPBasicCredentials] = Depends(_http_basic)):
+    """Enforce HTTP Basic Auth on the edit page when EDIT_PASSWORD is set."""
+    if not settings.EDIT_PASSWORD:
+        return
+    ok = credentials is not None and secrets.compare_digest(
+        credentials.password.encode(), settings.EDIT_PASSWORD.encode()
+    )
+    if not ok:
+        raise HTTPException(
+            status_code=401,
+            headers={"WWW-Authenticate": 'Basic realm="Schedule Editor"'},
+        )
+
 
 
 def get_template_context(request: Request = None) -> dict:
@@ -124,6 +142,7 @@ def get_template_context(request: Request = None) -> dict:
         "app_version": APP_VERSION,
         "kipro_configured": bool(settings.KIPRO_IP),
         "weather_configured": bool(settings.WEATHER_URL),
+        "public_url": settings.PUBLIC_URL,
     }
 
 
@@ -137,7 +156,7 @@ async def index(request: Request):
 
 
 @app.get("/edit", response_class=HTMLResponse)
-async def edit(request: Request):
+async def edit(request: Request, _=Depends(_require_edit_auth)):
     """Render the operator schedule page with controls."""
     context = get_template_context(request)
     context["view_only"] = False
