@@ -51,6 +51,7 @@
     {% if not view_only %}
     <!-- Recording Reminders (edit page only) -->
     <div id="recording-banners"></div>
+    <div class="deck-toast" x-show="deckToast" x-transition x-text="deckToast"></div>
     {% endif %}
 
     <!-- Now Playing / Up Next Section (hidden on Chrome iOS due to scroll bug) -->
@@ -75,9 +76,15 @@
             {% endif %}
             <button class="btn-recording-toggle"
                     :class="recordingEnabled ? 'recording-toggle-on' : 'recording-toggle-off'"
-                    @click="fetch('/api/recording/toggle', {method:'POST'})">
+                    @click="fetch('/api/recording/toggle', {method:'POST'}).then(() => { if (!recordingEnabled) pollKiProStatus().then(() => showDeckToast()); })">
                 <span x-text="recordingEnabled ? 'Rec Triggers: ON' : 'Rec Triggers: OFF'"></span>
             </button>
+            {% if kipro_configured %}
+            <span x-show="kiproReachable !== null"
+                  class="kipro-status-dot"
+                  :class="kiproReachable ? 'kipro-dot-ok' : 'kipro-dot-err'"
+                  :title="kiproReachable ? 'Deck reachable' : 'Deck unreachable'"></span>
+            {% endif %}
             {% if kipro_configured %}
             <button class="btn-deck btn-deck-record" title="Record" x-show="!kiproRolling" @click="fetch('/api/kipro/record', {method:'POST'})"></button>
             <button class="btn-deck btn-deck-stop" title="Stop" x-show="kiproRolling" @click="fetch('/api/kipro/stop', {method:'POST'})"></button>
@@ -144,6 +151,8 @@ function scheduleApp() {
         brightness: 0,
         recordingEnabled: false,
         kiproRolling: null,
+        kiproReachable: null,
+        deckToast: '',
         _activeActNames: [],
         weatherTemp: null,
         weatherWind: '',
@@ -204,10 +213,19 @@ function scheduleApp() {
                 const res = await fetch('/api/kipro/status');
                 const data = await res.json();
                 this.kiproRolling = data.configured ? data.rolling : null;
+                this.kiproReachable = data.configured ? (data.error == null) : null;
                 this.refreshRecordingBanners();
             } catch (e) {
                 // silently ignore — Ki Pro may not be on network
             }
+        },
+
+        showDeckToast() {
+            if (this.kiproReachable === null) return;
+            this.deckToast = this.kiproReachable
+                ? '✓ Deck reachable — triggers armed'
+                : '⚠ Deck unreachable — check Ki Pro connection';
+            setTimeout(() => { this.deckToast = ''; }, 4000);
         },
 
         async pollWeather() {
@@ -217,8 +235,7 @@ function scheduleApp() {
                 if (d.error) return;
                 this.weatherTemp = d.temperature;
                 const dir = this._degreesToCompass(d.windDirection);
-                const gustStr = d.gust && d.gust !== d.wind ? `, gusts ${d.gust}` : '';
-                this.weatherWind = `${d.wind} ${d.windUnits} ${dir}${gustStr}`;
+                this.weatherWind = `${d.wind} ${d.windUnits} ${dir}`;
                 if (d.lastReceived) {
                     const t = new Date(d.lastReceived);
                     const mo = t.toLocaleString('en-US', { month: 'numeric', timeZone: '{{ timezone }}' });

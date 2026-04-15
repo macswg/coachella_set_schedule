@@ -1425,6 +1425,36 @@ body {
     border: 1px solid var(--border-color);
 }
 
+/* Ki Pro connectivity dot (next to Rec Triggers button) */
+.kipro-status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.kipro-dot-ok {
+    background: #44ff44;
+    box-shadow: 0 0 5px #44ff44;
+}
+
+.kipro-dot-err {
+    background: #ff4444;
+    box-shadow: 0 0 5px #ff4444;
+}
+
+/* Temporary deck status toast */
+.deck-toast {
+    margin: 4px 16px 0;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
 .recording-toggle-off:hover {
     background: var(--border-color);
     color: var(--text-secondary);
