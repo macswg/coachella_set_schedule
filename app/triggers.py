@@ -103,12 +103,12 @@ def check_and_fire(acts: list[Act]) -> list[str]:
         if trigger_secs <= now_secs <= window_end:
             try:
                 recorder.start_recording(act.act_name)
+                _triggered.add(act.act_name)
+                _active_reminders.add(act.act_name)
+                newly_triggered.append(act.act_name)
+                print(f"[triggers] triggered recording for {act.act_name!r}")
             except Exception as e:
-                print(f"[triggers] start_recording failed for {act.act_name!r}: {e}")
-            _triggered.add(act.act_name)
-            _active_reminders.add(act.act_name)
-            newly_triggered.append(act.act_name)
-            print(f"[triggers] triggered recording for {act.act_name!r}")
+                print(f"[triggers] start_recording failed for {act.act_name!r}: {e} — will retry next cycle")
 
     return newly_triggered
 

@@ -339,6 +339,7 @@ function scheduleApp() {
 
             for (const act of acts) {
                 if (act.isLoadIn || act.isOnDeck || act.isPreshow) continue;
+                if (act.scheduledEnd === null) continue;
                 if (act.actualEnd !== null) {
                     // Completed act: slip is how early/late it ended
                     slip = act.actualEnd - act.scheduledEnd;
@@ -370,17 +371,17 @@ function scheduleApp() {
                 if (act.isLoadIn || act.isOnDeck || act.isEndOfShow || act.isPreshow) continue;
                 act.row.classList.remove('flash-warning', 'flash-danger', 'act-live', 'act-live-ending', 'act-missed');
 
-                if (!act.hasActualStart && !act.hasActualEnd && currentSecs >= act.scheduledEnd) {
+                if (act.scheduledEnd !== null && !act.hasActualStart && !act.hasActualEnd && currentSecs >= act.scheduledEnd) {
                     act.row.classList.add('act-missed');
                     continue;
                 }
 
-                if (!startingSoon && !act.hasActualStart && currentSecs >= act.scheduledStart - fiveMin && currentSecs < act.scheduledEnd) {
+                if (!startingSoon && !act.hasActualStart && currentSecs >= act.scheduledStart - fiveMin && (act.scheduledEnd === null || currentSecs < act.scheduledEnd)) {
                     act.row.classList.add('flash-warning');
                 } else if (act.hasActualStart && !act.hasActualEnd) {
-                    if (currentSecs >= act.scheduledEnd) {
+                    if (act.scheduledEnd !== null && currentSecs >= act.scheduledEnd) {
                         act.row.classList.add('flash-danger');
-                    } else if (currentSecs >= act.scheduledEnd - fiveMin) {
+                    } else if (act.scheduledEnd !== null && currentSecs >= act.scheduledEnd - fiveMin) {
                         act.row.classList.add('act-live-ending');
                     } else {
                         act.row.classList.add('act-live');
@@ -413,12 +414,16 @@ function scheduleApp() {
                 const actName = act.row.querySelector('.act-name')?.textContent.trim() || '';
 
                 // END OF SHOW is a hard stop — nothing after it in the sheet belongs
-                // to this show. If its scheduled time has been reached (or it has no
-                // time), mark the show as over; otherwise treat it as the next item.
+                // to this show. If its scheduled time has been reached, mark the show as
+                // over. If it has no scheduled time, only flip to EOS once the last act
+                // has been marked complete (seenAnyAct=true, no in-progress act).
                 if (act.isEndOfShow) {
-                    if (act.scheduledStart === null || currentSecs >= act.scheduledStart) {
+                    const eosHasTime = act.scheduledStart !== null;
+                    if (eosHasTime && currentSecs >= act.scheduledStart) {
                         endOfShowReached = true;
-                    } else if (!nextUpcoming) {
+                    } else if (!eosHasTime && seenAnyAct) {
+                        endOfShowReached = true;
+                    } else if (eosHasTime && !nextUpcoming) {
                         nextUpcoming = {
                             name: actName,
                             startSecs: act.scheduledStart,
@@ -433,15 +438,17 @@ function scheduleApp() {
                 if (!act.isOnDeck) {
                     if (act.hasActualStart && !act.hasActualEnd) {
                         nowPlaying = actName;
-                        const remaining = act.scheduledEnd - currentSecs;
-                        countdown = formatCountdown(remaining);
-                        isOvertime = remaining < 0;
+                        if (act.scheduledEnd !== null) {
+                            const remaining = act.scheduledEnd - currentSecs;
+                            countdown = formatCountdown(remaining);
+                            isOvertime = remaining < 0;
+                        }
                         break;
                     }
                     if (act.hasActualEnd) { seenAnyAct = true; continue; }
                 }
 
-                if (!act.hasActualStart && currentSecs >= act.scheduledStart && currentSecs < act.scheduledEnd && !shouldBePlayingNow) {
+                if (!act.hasActualStart && currentSecs >= act.scheduledStart && (act.scheduledEnd === null || currentSecs < act.scheduledEnd) && !shouldBePlayingNow) {
                     shouldBePlayingNow = {
                         name: actName,
                         startSecs: act.scheduledStart,
@@ -468,6 +475,22 @@ function scheduleApp() {
 
             let startingSoon = false;
             let isEndOfShow = false;
+
+            // Issue #22: while the last set is playing, find the END OF SHOW scheduled
+            // time (if any) so we can show a secondary "show ends in X:XX" countdown.
+            let endOfShowSecs = null;
+            if (nowPlaying) {
+                let pastNowPlaying = false;
+                for (const act of acts) {
+                    if (act.isLoadIn) continue;
+                    if (!pastNowPlaying) {
+                        if (act.hasActualStart && !act.hasActualEnd && !act.isOnDeck) pastNowPlaying = true;
+                        continue;
+                    }
+                    if (act.isEndOfShow && act.scheduledStart !== null) endOfShowSecs = act.scheduledStart;
+                    break;
+                }
+            }
 
             // Update DOM — avoid rebuilding innerHTML every tick to preserve CSS animations
             const existingDiv = section.firstElementChild;
@@ -536,20 +559,43 @@ function scheduleApp() {
 
             if (nowPlaying) {
                 const cl = `now-playing${isOvertime ? ' is-overtime' : ''}`;
-                if (existingDiv?.classList.contains('now-playing') && existingDiv.querySelector('.np-artist')?.textContent === nowPlaying) {
+                const hasCountdown = countdown !== '';
+                const hasEos = endOfShowSecs !== null;
+                const prevHasCountdown = !!existingDiv?.querySelector('.np-countdown-wrap');
+                const prevHasEos = !!existingDiv?.querySelector('.np-eos-wrap');
+                const sameCard = existingDiv?.classList.contains('now-playing')
+                    && existingDiv.querySelector('.np-artist')?.textContent === nowPlaying
+                    && prevHasCountdown === hasCountdown
+                    && prevHasEos === hasEos;
+                if (sameCard) {
                     existingDiv.className = cl;
-                    const cd = existingDiv.querySelector('.np-countdown');
-                    if (cd) { cd.className = `np-countdown${isOvertime ? ' overtime' : ''}`; cd.textContent = countdown; }
-                    existingDiv.querySelector('.np-suffix').textContent = isOvertime ? 'over' : 'remaining';
+                    if (hasCountdown) {
+                        const cd = existingDiv.querySelector('.np-countdown');
+                        if (cd) { cd.className = `np-countdown${isOvertime ? ' overtime' : ''}`; cd.textContent = countdown; }
+                        const sf = existingDiv.querySelector('.np-suffix');
+                        if (sf) sf.textContent = isOvertime ? 'over' : 'remaining';
+                    }
+                    if (hasEos) {
+                        const ec = existingDiv.querySelector('.np-eos-countdown');
+                        if (ec) ec.textContent = formatCountdown(endOfShowSecs - currentSecs);
+                    }
                 } else {
+                    const countdownHtml = hasCountdown ? `
+                            <div class="np-countdown-wrap">
+                                <span class="np-countdown${isOvertime ? ' overtime' : ''}">${countdown}</span>
+                                <span class="np-suffix">${isOvertime ? 'over' : 'remaining'}</span>
+                            </div>` : '';
+                    const eosHtml = hasEos ? `
+                            <div class="np-eos-wrap">
+                                <span class="np-eos-label">Show ends in</span>
+                                <span class="np-eos-countdown">${formatCountdown(endOfShowSecs - currentSecs)}</span>
+                            </div>` : '';
                     section.innerHTML = `
                         <div class="${cl}">
                             <span class="np-label">Now Playing</span>
                             <span class="np-artist">${nowPlaying}</span>
-                            <div class="np-countdown-wrap">
-                                <span class="np-countdown${isOvertime ? ' overtime' : ''}">${countdown}</span>
-                                <span class="np-suffix">${isOvertime ? 'over' : 'remaining'}</span>
-                            </div>
+                            ${countdownHtml}
+                            ${eosHtml}
                         </div>`;
                 }
             } else if (endOfShowReached || (upNext && isEndOfShow)) {

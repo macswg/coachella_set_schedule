@@ -40,7 +40,12 @@ _sheet: Optional[gspread.Worksheet] = None
 
 # Multi-show state: ordered list of tabs and current position
 _show_tabs: list[str] = settings.SHOW_TABS if settings.SHOW_TABS else ([settings.GOOGLE_SHEET_TAB] if settings.GOOGLE_SHEET_TAB else [])
-_active_tab_index: int = 0
+# Start at the tab named by GOOGLE_SHEET_TAB if it's in the list; otherwise index 0
+_active_tab_index: int = (
+    _show_tabs.index(settings.GOOGLE_SHEET_TAB)
+    if settings.GOOGLE_SHEET_TAB and settings.GOOGLE_SHEET_TAB in _show_tabs
+    else 0
+)
 
 # Row number cache: act_name → 1-indexed sheet row. Rebuilt on every get_schedule() call.
 _row_cache: dict[str, int] = {}
@@ -171,7 +176,8 @@ def get_schedule() -> list[Act]:
             scheduled_start = last_scheduled_end
 
         # Skip rows without act name or required scheduled times
-        if not act_name or not scheduled_start or (not scheduled_end and not is_no_end_row):
+        # scheduled_end is optional — acts with no end time (e.g. final headliner) are allowed through
+        if not act_name or not scheduled_start:
             continue
 
         if scheduled_end:

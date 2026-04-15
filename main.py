@@ -77,6 +77,13 @@ async def lifespan(app: FastAPI):
     # Start background polling for schedule updates
     _polling_task = asyncio.create_task(poll_schedule())
 
+    if settings.AUTO_RELOAD_ON_STARTUP:
+        async def _startup_reload():
+            await asyncio.sleep(settings.STARTUP_RELOAD_DELAY)
+            await manager.broadcast_reload()
+            print(f"[startup] broadcast hard-reload to all clients after {settings.STARTUP_RELOAD_DELAY}s delay")
+        asyncio.create_task(_startup_reload())
+
     yield
 
     # Shutdown

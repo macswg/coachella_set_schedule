@@ -271,6 +271,28 @@ body {
     color: var(--text-secondary);
 }
 
+/* End-of-show secondary countdown (shown inside now-playing during last set) */
+.np-eos-wrap {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.np-eos-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.np-eos-countdown {
+    font-size: 1.1rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-secondary);
+}
+
 /* Overtime state */
 .now-playing.is-overtime {
     background: linear-gradient(135deg, rgba(255, 68, 68, 0.15) 0%, rgba(255, 68, 68, 0.08) 100%);
