@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.config import settings, APP_VERSION
+from app import companion
 from app import notifier
 from app import triggers as trigger_engine
 
@@ -198,6 +199,7 @@ async def record_start(act_name: str):
 
     if act:
         notifier.notify_act_started(act_name, current_time.strftime("%H:%M"))
+        companion.trigger_set_mv_rec()
         await broadcast_schedule_update()
 
     return {"status": "ok"}
@@ -212,6 +214,7 @@ async def record_end(act_name: str):
 
     if act:
         notifier.notify_act_ended(act_name, current_time.strftime("%H:%M"))
+        companion.trigger_changeover_rec()
         await broadcast_schedule_update()
 
     return {"status": "ok"}

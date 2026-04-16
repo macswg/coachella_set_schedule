@@ -42,6 +42,9 @@ class Settings:
     # ntfy.sh push notifications
     NTFY_URL: str = os.getenv("NTFY_URL", "")
 
+    # Bitfocus Companion HTTP API
+    COMPANION_URL: str = os.getenv("COMPANION_URL", "").rstrip("/")
+
     # WeatherLink weather data (optional)
     WEATHER_URL: str = os.getenv("WEATHER_URL", "")
 

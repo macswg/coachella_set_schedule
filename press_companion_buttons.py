@@ -15,5 +15,5 @@ def press(page, row, col):
 def trigger_changeover_rec():
     press(15, 3, 2)
 
-def trigger_wide_rec():
+def trigger_set_mv_rec():
     press(15, 3, 4)

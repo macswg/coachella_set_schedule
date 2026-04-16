@@ -1489,6 +1489,12 @@ body {
     opacity: 1;
 }
 
+@media (pointer: coarse) {
+    .btn-advance-show {
+        display: none;
+    }
+}
+
 /* Recording Toggle Button */
 .btn-recording-toggle {
     padding: 0.5rem 1rem;
