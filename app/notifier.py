@@ -14,7 +14,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from app.config import settings
-from app.models import Act
+from app.models import Act, time_to_secs
 
 # Tracks which acts have already sent each notification type this session.
 # Server restart re-arms all notifications — intentional.
@@ -24,10 +24,6 @@ _notified_ending: set[str] = set()
 # Notification fires when now is within this window around the target time.
 # Should be >= poll interval (30s) to avoid missing the window.
 _WINDOW_SECONDS = 45
-
-
-def _time_to_secs(t) -> int:
-    return t.hour * 3600 + t.minute * 60 + t.second
 
 
 def _in_window(now_secs: int, target_secs: int) -> bool:
@@ -47,7 +43,7 @@ def check_and_notify(acts: list[Act]) -> None:
         return
 
     now = datetime.now(tz=ZoneInfo(settings.TIMEZONE)).time()
-    now_secs = _time_to_secs(now)
+    now_secs = time_to_secs(now)
 
     for act in acts:
         if act.is_loadin or act.is_ondeck or act.is_changeover or act.is_preshow:
@@ -57,7 +53,7 @@ def check_and_notify(acts: list[Act]) -> None:
 
         # 5 minutes before scheduled start
         if act.actual_start is None and name not in _notified_starting:
-            target = (_time_to_secs(act.scheduled_start) - 300) % 86400
+            target = (time_to_secs(act.scheduled_start) - 300) % 86400
             if _in_window(now_secs, target):
                 notify(
                     title=f"Starting in ~5 min: {name}",
@@ -69,7 +65,7 @@ def check_and_notify(acts: list[Act]) -> None:
 
         # 10 minutes before scheduled end (only if act has started)
         if act.actual_start is not None and act.actual_end is None and name not in _notified_ending:
-            target = (_time_to_secs(act.scheduled_end) - 600) % 86400
+            target = (time_to_secs(act.scheduled_end) - 600) % 86400
             if _in_window(now_secs, target):
                 notify(
                     title=f"Ending in ~10 min: {name}",

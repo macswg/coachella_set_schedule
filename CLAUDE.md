@@ -97,7 +97,8 @@ coachella_set_schedule/
 │   ├── recorder.py      # AJA Ki Pro HTTP commands (record/stop/status)
 │   ├── triggers.py      # Schedule-based recording trigger engine
 │   ├── ntfy.py          # ntfy.sh push notification sender
-│   └── notifier.py      # Schedule-based and action-based ntfy notifications
+│   ├── notifier.py      # Schedule-based and action-based ntfy notifications
+│   └── companion.py     # Bitfocus Companion HTTP button-press integration
 ├── templates/
 │   ├── base.html        # Base template with HTMX/Alpine.js; renders version footer
 │   ├── index.html       # Main schedule view
@@ -137,6 +138,12 @@ The app polls Google Sheets every 30 seconds (configurable via `POLL_INTERVAL_SE
 - **Midnight rollover:** Acts past midnight (e.g. `01:00`) are stored as plain `time` objects; rollover is handled at comparison time. Server-side: `models.py` adds `timedelta(days=1)` when end < start. Client-side: `normalizeActTimes()` walks acts in sheet order and bumps any time that drops more than 1 hour below the previous act's time. Acts must be in chronological order in the sheet for this to work correctly. The trigger engine (`triggers.py`) applies the same normalization via `_normalize_act_start_secs()`. Both use a **5am reset threshold**: times before 5am on a midnight-crossing show are treated as same-show (next-day) time; after 5am the schedule resets to normal day context.
 - **END OF SHOW row:** A sheet row whose artist name is exactly `END` or `END OF SHOW` (case-insensitive) marks the end of the show. The `is_end_of_show` computed field on `Act` identifies these rows. They require no scheduled time — the parser infers one from the previous act's `scheduled_end`. If the END OF SHOW row has no scheduled time (e.g. last act has no `scheduled_end`), the banner switches to "END OF SHOW / Have a Great Night" only once the operator marks the last act complete. The loop stops at END OF SHOW and never processes acts below it in the sheet.
 - **Acts with no `scheduled_end`:** Allowed through the parser. Client-side null guards prevent NaN countdowns and false `act-missed` states. While the last act is live, a secondary "Show ends in X:XX" countdown appears in the now-playing card if an END OF SHOW row with a scheduled time follows it.
+- **Special row types** — computed fields on `Act` drive UI and trigger behavior:
+  - `is_loadin` — name contains `'load in'`: informational label, no buttons, auto-hidden 1 hour after scheduled start
+  - `is_ondeck` — name contains `'on deck'` **or** `'stage time'`: shows screentime counter + START/STOP Screentime buttons; no set-start/stop buttons
+  - `is_changeover` — name contains `'changeover'`: no recording trigger fired
+  - `is_preshow` — name contains `'preshow'`: no recording trigger, no set buttons
+  - `is_end_of_show` — name is exactly `'end'` or `'end of show'` (case-insensitive): end-of-show banner trigger
 
 ## Client-Side Timer Architecture
 
@@ -194,6 +201,17 @@ Set `WEATHER_URL` in `.env` to a WeatherLink embeddable getData endpoint to enab
 - **Poll interval** — every 3 minutes client-side via `pollWeather()` in `index.html`
 - **Backend proxy** — `GET /api/weather` in `main.py` fetches WeatherLink and returns a cleaned subset of fields; all network errors are silently swallowed
 - **Placement** — header left column, below the "Live Data" server status indicator
+
+## Bitfocus Companion Integration
+
+Set `COMPANION_URL` in `.env` (e.g. `http://192.168.1.100:19267`) to enable Companion button presses. All calls are fire-and-forget in daemon threads; everything silently no-ops if `COMPANION_URL` is unset.
+
+`app/companion.py` exposes two functions called from the operator mark-start/stop endpoints in `main.py`:
+
+| Operator action | Companion call | Button |
+|---|---|---|
+| Mark Set Start (`POST /acts/{name}/start`) | `trigger_set_mv_rec()` | Page 15, Row 3, Col 4 |
+| Mark Set Stop (`POST /acts/{name}/end`) | `trigger_changeover_rec()` | Page 15, Row 3, Col 2 |
 
 ## Access Control & Public URL
 

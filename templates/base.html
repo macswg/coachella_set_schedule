@@ -18,12 +18,18 @@
     {% block content %}{% endblock %}
     <footer style="text-align:center;padding:1rem 0 0.5rem;color:var(--text-muted);font-size:0.65rem;opacity:0.5;">v{{ app_version }}</footer>
     <script>
-        document.body.addEventListener('htmx:wsBeforeMessage', function(event) {
-            try {
-                if (JSON.parse(event.detail.message).type === 'reload') {
-                    window.location.reload();
-                }
-            } catch (e) {}
+        // Fallback reload handler for pages without scheduleApp (e.g. /stage).
+        // scheduleApp.setupBrightnessListener() handles reload on /, /edit, /preview.
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof scheduleApp === 'undefined') {
+                document.body.addEventListener('htmx:wsBeforeMessage', function(event) {
+                    try {
+                        if (JSON.parse(event.detail.message).type === 'reload') {
+                            window.location.reload();
+                        }
+                    } catch (e) {}
+                });
+            }
         });
     </script>
 </body>

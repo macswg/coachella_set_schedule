@@ -19,6 +19,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 from app.config import settings
+from app.models import time_to_secs
 from app.models import Act
 
 SCOPES = [
@@ -111,9 +112,6 @@ def _format_screentime(seconds: int) -> str:
     return f"{hours}:{mins:02d}:{secs:02d}"
 
 
-def _time_to_secs(t: time) -> int:
-    """Convert a time object to seconds since midnight."""
-    return t.hour * 3600 + t.minute * 60 + t.second
 
 
 def _parse_screentime_seconds(value: str) -> int:
@@ -279,7 +277,7 @@ def stop_screentime(act_name: str) -> Optional[Act]:
     now = datetime.now(tz=ZoneInfo(settings.TIMEZONE)).time()
 
     # Compute elapsed seconds, handle midnight crossing
-    elapsed = _time_to_secs(now) - _time_to_secs(session_start)
+    elapsed = time_to_secs(now) - time_to_secs(session_start)
     if elapsed < 0:
         elapsed += 86400
 
@@ -321,7 +319,7 @@ def write_active_screentimes() -> None:
 
     tz = ZoneInfo(settings.TIMEZONE)
     now = datetime.now(tz=tz).time()
-    now_secs = _time_to_secs(now)
+    now_secs = time_to_secs(now)
     sheet = _get_sheet()
 
     # Single sheet read; build a name→row_num map for all active sessions
@@ -335,7 +333,7 @@ def write_active_screentimes() -> None:
             row_map[name] = i + HEADER_ROW + 1
 
     for act_name, session_start in list(_screentime_sessions.items()):
-        elapsed = now_secs - _time_to_secs(session_start)
+        elapsed = now_secs - time_to_secs(session_start)
         if elapsed < 0:
             elapsed += 86400
 

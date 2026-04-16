@@ -3,6 +3,10 @@ from typing import Optional
 from pydantic import BaseModel, computed_field
 
 
+def time_to_secs(t: time) -> int:
+    return t.hour * 3600 + t.minute * 60 + t.second
+
+
 class Act(BaseModel):
     """Represents a single act in the festival schedule."""
 

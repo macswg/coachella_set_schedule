@@ -12,4 +12,3 @@
 
 - **Refine `/stage` view** — update the look and layout of the stage display page.
 
-- **KiPro recorder integration** — implement `start_recording()` and `stop_recording()` in `app/recorder.py` to control the KiPro record decks over the network.

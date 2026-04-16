@@ -13,7 +13,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from app.config import settings
-from app.models import Act
+from app.models import Act, time_to_secs
 
 
 # Runtime enable/disable toggle — starts from config, operators can flip it live
@@ -40,10 +40,6 @@ def set_enabled(value: bool) -> None:
     _enabled = value
 
 
-def _time_to_secs(t) -> int:
-    return t.hour * 3600 + t.minute * 60 + t.second
-
-
 def _normalize_act_start_secs(acts: list[Act]) -> dict[str, int]:
     """Walk acts in schedule order, bumping post-midnight start times past 86400.
 
@@ -57,9 +53,9 @@ def _normalize_act_start_secs(acts: list[Act]) -> dict[str, int]:
     prev_secs = 0
     for act in acts:
         if act.is_loadin:
-            result[act.act_name] = _time_to_secs(act.scheduled_start)
+            result[act.act_name] = time_to_secs(act.scheduled_start)
             continue
-        secs = _time_to_secs(act.scheduled_start)
+        secs = time_to_secs(act.scheduled_start)
         if prev_secs > 0 and secs < prev_secs - 3600:
             secs += 86400
         result[act.act_name] = secs
@@ -75,7 +71,7 @@ def check_and_fire(acts: list[Act]) -> list[str]:
     from app import recorder
 
     now = datetime.now(tz=ZoneInfo(settings.TIMEZONE)).time()
-    now_secs = _time_to_secs(now)
+    now_secs = time_to_secs(now)
     pre_secs = settings.RECORDING_PRE_START_MINUTES * 60
     newly_triggered = []
 
@@ -96,7 +92,7 @@ def check_and_fire(acts: list[Act]) -> list[str]:
         if act.act_name in _triggered:
             continue
 
-        start_secs = normalized.get(act.act_name, _time_to_secs(act.scheduled_start))
+        start_secs = normalized.get(act.act_name, time_to_secs(act.scheduled_start))
         trigger_secs = start_secs - pre_secs
         window_end = start_secs + _TRIGGER_GRACE_SECONDS
 
