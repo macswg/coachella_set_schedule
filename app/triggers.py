@@ -85,7 +85,7 @@ def check_and_fire(acts: list[Act]) -> list[str]:
     max_start = max(normalized.values(), default=0)
     # If the show extends past midnight and we're currently in the early-morning
     # window (before 6am), treat now as next-day time too.
-    if max_start > 86400 and now_secs < 18000:  # treat as same show until 5am
+    if max_start >= 86400 and now_secs < 18000:  # treat as same show until 5am
         now_secs += 86400
 
     for act in acts:

@@ -1,5 +1,8 @@
 import os
 import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 
 COMPANION = os.environ.get("COMPANION_URL", "").rstrip("/")
 

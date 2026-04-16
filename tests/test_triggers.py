@@ -223,3 +223,29 @@ class TestMidnightTriggers:
         ]
         result, mock_rec = self._fire(acts, time(23, 55))
         assert "Midnight Act" in result
+
+    def test_midnight_act_is_last_act_grace_window(self):
+        """When a 00:00 act is the last act, max_start == 86400 exactly.
+        now_secs must still be bumped at 00:15 so the grace window is open.
+        Regression: the old `max_start > 86400` check missed this edge case."""
+        acts = [
+            make_act("Evening Act", 22, 0, 23, 0),
+            make_act("Midnight Act", 0, 0, 1, 0),  # last act — max_start == 86400
+        ]
+        # 15 min after midnight: should still be within the 1-hour grace window
+        result, mock_rec = self._fire(acts, time(0, 15))
+        assert "Midnight Act" in result
+        mock_rec.assert_called_with("Midnight Act")
+
+    def test_midnight_act_is_last_act_not_bumped_evening(self):
+        """Evening acts should not fire at 00:15 even when max_start == 86400."""
+        acts = [
+            make_act("Evening Act", 22, 0, 23, 0),
+            make_act("Midnight Act", 0, 0, 1, 0),
+        ]
+        # Fire once at correct time to trigger Evening Act
+        self._fire(acts, time(21, 55))
+        triggers._triggered.clear()
+        # At 00:15 Evening Act must not re-trigger (its window closed at 23:00)
+        result, _ = self._fire(acts, time(0, 15))
+        assert "Evening Act" not in result
