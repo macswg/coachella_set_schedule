@@ -1227,10 +1227,17 @@ body {
     text-align: center;
 }
 
-.stage-np-section .np-artist,
 .stage-np-section .np-countdown,
 .stage-np-section .stage-start-time-value {
     white-space: nowrap;
+}
+
+.stage-np-section .np-artist {
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    max-width: 100%;
+    text-align: center;
 }
 
 .stage-np-section .np-artist {
@@ -1257,6 +1264,26 @@ body {
 .stage-np-section.stage-np-compact .np-artist { font-size: 14vh; }
 .stage-np-section.stage-np-compact .np-countdown { font-size: 14vh; }
 .stage-np-section.stage-np-compact .np-suffix { font-size: 2vh; }
+
+.np-act-times {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+    margin-top: 4px;
+}
+
+.np-act-times-sep {
+    opacity: 0.5;
+}
+
+.np-act-times-label {
+    font-size: 0.5em;
+    vertical-align: middle;
+    opacity: 0.7;
+}
 
 .stage-start-time {
     font-size: 2.5vh;
@@ -1354,26 +1381,89 @@ body {
 .stage-np-section.stage-np-compact .np-artist   { font-size: 7vh; }
 .stage-np-section.stage-np-compact .np-countdown { font-size: 7vh; }
 
+/* In fullscreen: remove outer padding so card can fill edge-to-edge, hide scrollbar */
+:fullscreen body,
+:-webkit-full-screen body {
+    overflow: hidden;
+}
+
+:fullscreen .stage-display,
+:-webkit-full-screen .stage-display {
+    padding: 8px 0 0 0;
+    gap: 4px;
+}
+
+:fullscreen .stage-display .stage-header,
+:-webkit-full-screen .stage-display .stage-header {
+    margin: 0 8px;
+    border-radius: 8px;
+}
+
+:fullscreen .stage-display .stage-header h1,
+:-webkit-full-screen .stage-display .stage-header h1 {
+    font-size: clamp(1rem, 4.5vh, 6rem);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+:fullscreen .stage-display .server-status-label,
+:-webkit-full-screen .stage-display .server-status-label {
+    font-size: clamp(0.75rem, 2.5vh, 3rem);
+    white-space: nowrap;
+}
+
+:fullscreen .stage-header .header-center,
+:-webkit-full-screen .stage-header .header-center {
+    gap: 8px;
+    padding-bottom: 8px;
+}
+
 /* In fullscreen, fill all remaining space after the header */
 :fullscreen .stage-display .stage-np-section,
 :-webkit-full-screen .stage-display .stage-np-section {
     flex: 1;
     max-height: none;
+    padding: 0;
+    align-items: stretch;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+}
+
+/* In fullscreen, card fills the full section height with content centered */
+:fullscreen .stage-np-section .now-playing,
+:-webkit-full-screen .stage-np-section .now-playing,
+:fullscreen .stage-np-section .up-next,
+:-webkit-full-screen .stage-np-section .up-next,
+:fullscreen .stage-np-section .preshow-playing,
+:-webkit-full-screen .stage-np-section .preshow-playing,
+:fullscreen .stage-np-section .end-of-show-card,
+:-webkit-full-screen .stage-np-section .end-of-show-card {
+    justify-content: center;
+    padding: 24px;
 }
 
 /* Restore full-size text in fullscreen */
 :fullscreen .stage-np-section .np-label,
-:-webkit-full-screen .stage-np-section .np-label    { font-size: 2.5vh; }
+:-webkit-full-screen .stage-np-section .np-label    { font-size: 4vh; }
 :fullscreen .stage-np-section .np-artist,
 :-webkit-full-screen .stage-np-section .np-artist   { font-size: 18vh; }
 :fullscreen .stage-np-section .np-countdown,
 :-webkit-full-screen .stage-np-section .np-countdown { font-size: 18vh; }
 :fullscreen .stage-np-section .np-suffix,
-:-webkit-full-screen .stage-np-section .np-suffix   { font-size: 2.5vh; }
+:-webkit-full-screen .stage-np-section .np-suffix   { font-size: 4vh; }
 :fullscreen .stage-np-section .np-changeover,
 :-webkit-full-screen .stage-np-section .np-changeover { font-size: 10vh; }
+:fullscreen .stage-np-section .stage-start-time,
+:-webkit-full-screen .stage-np-section .stage-start-time { font-size: 4vh; }
 :fullscreen .stage-np-section .stage-start-time-value,
 :-webkit-full-screen .stage-np-section .stage-start-time-value { font-size: 14vh; }
+:fullscreen .stage-display .stage-tod-label-text,
+:-webkit-full-screen .stage-display .stage-tod-label-text { font-size: 3vh; }
+:fullscreen .stage-np-section .np-act-times,
+:-webkit-full-screen .stage-np-section .np-act-times { font-size: 9vh; }
 :fullscreen .stage-np-section.stage-np-compact .np-artist,
 :-webkit-full-screen .stage-np-section.stage-np-compact .np-artist   { font-size: 14vh; }
 :fullscreen .stage-np-section.stage-np-compact .np-countdown,
