@@ -80,14 +80,21 @@
                 <span x-text="recordingEnabled ? 'Rec Triggers: ON' : 'Rec Triggers: OFF'"></span>
             </button>
             {% if kipro_configured %}
-            <span x-show="kiproReachable !== null"
-                  class="kipro-status-dot"
-                  :class="kiproReachable ? 'kipro-dot-ok' : 'kipro-dot-err'"
-                  :title="kiproReachable ? 'Deck reachable' : 'Deck unreachable'"></span>
-            {% endif %}
-            {% if kipro_configured %}
-            <button class="btn-deck btn-deck-record" title="Record" x-show="!kiproRolling" @click="fetch('/api/kipro/record', {method:'POST'})"></button>
-            <button class="btn-deck btn-deck-stop" title="Stop" x-show="kiproRolling" @click="fetch('/api/kipro/stop', {method:'POST'})"></button>
+            <button class="btn-deck-combined"
+                    :class="kiproRolling ? 'deck-rolling' : (kiproReachable ? 'deck-ready' : 'deck-offline')"
+                    :title="kiproRolling ? 'Rolling — click to stop' : (kiproReachable ? 'Deck ready — click to record' : 'Deck unreachable')"
+                    :disabled="kiproReachable === false"
+                    @click="kiproRolling ? fetch('/api/kipro/stop', {method:'POST'}) : fetch('/api/kipro/record', {method:'POST'})">
+            </button>
+            <span class="deck-mobile-status"
+                  :class="kiproReachable === true ? 'deck-mobile-ok' : kiproReachable === false ? 'deck-mobile-err' : 'deck-mobile-unknown'"
+                  :title="kiproReachable === true ? 'Deck reachable' : kiproReachable === false ? 'Deck unreachable' : 'Checking deck...'"></span>
+            <button class="btn-deck-mobile"
+                    :class="kiproRolling ? 'deck-mobile-rolling' : 'deck-mobile-ready'"
+                    :title="kiproRolling ? 'Rolling — tap to stop' : 'Tap to record'"
+                    :disabled="kiproReachable === false"
+                    @click="kiproRolling ? fetch('/api/kipro/stop', {method:'POST'}) : fetch('/api/kipro/record', {method:'POST'})">
+            </button>
             {% endif %}
             {% endif %}
 	    <button class="btn-toggle-completed" @click="hideCompleted = !hideCompleted">
