@@ -170,7 +170,7 @@ The app version is stored in the `VERSION` file at the repo root. It is read at 
 Set `KIPRO_IP` in `.env` to enable. The app communicates with the Ki Pro via its HTTP API (`/config?action=...`).
 
 - **Automatic triggers** — `app/triggers.py` fires `start_recording()` a configurable number of minutes before a scheduled act start. Toggled live via the "Rec Triggers: ON/OFF" button on `/edit`. Trigger windows are computed using `_normalize_act_start_secs()` so midnight-crossing shows work correctly without modulo arithmetic.
-- **Manual record/stop buttons** — `/edit` shows a red record button and a stop button in the schedule header (only when `KIPRO_IP` is set). Only one is visible at a time, toggled by the actual deck state.
+- **Deck status + record/stop button** — `/edit` shows a single combined circular button in the schedule header (only when `KIPRO_IP` is set). On desktop it is a combined widget; on touch devices (`pointer: coarse`) it splits into a separate status dot and a plain record/stop button to avoid iOS rendering issues with `::after` pseudo-elements on buttons. States: red outer + pulsing green/red inner dot = ready to record; red pulsing square inside = rolling; gray dimmed = unreachable/disabled.
 - **Transport state polling** — the frontend polls `GET /api/kipro/status` every 5 seconds. This queries `eParamID_TransportState` on the Ki Pro; value `"2"` = recording. The REC banner in `/edit` is driven by this actual deck state (not just trigger state). If the deck is rolling with no active trigger, a generic "Deck Rolling" banner is shown.
 - **Manual API endpoints** — `POST /api/kipro/record` and `POST /api/kipro/stop` send commands directly to the deck.
 
@@ -217,6 +217,7 @@ Set `COMPANION_URL` in `.env` (e.g. `http://192.168.1.100:19267`) to enable Comp
 
 - **Edit page auth** — Set `EDIT_PASSWORD` in `.env` to enable HTTP Basic Auth on `GET /edit`. The browser prompts once per session. Only the password is checked; the username field is ignored. Leave empty to disable (LAN-only use).
 - **Public URL / QR code** — Set `PUBLIC_URL` in `.env` (e.g. `https://coachella.pickle.green`) to specify the Cloudflare tunnel address used in the viewer QR code. Falls back to `window.location.origin` if unset. The QR button appears in the schedule header on all pages and generates the code client-side via `qrcodejs`.
+- **Cloudflare CSS caching** — Cloudflare aggressively caches static assets. After a Docker rebuild that changes CSS or JS, purge the cache via Cloudflare dashboard → Caching → Configuration → Purge Everything. When debugging mobile-only style issues, always test via LAN IP first to rule out CDN caching before assuming a code bug.
 
 ## Startup Auto-Reload
 
@@ -231,5 +232,14 @@ The app continues to function client-side if the server goes down after the page
 - **`overscroll-behavior: none`** — prevents pull-to-refresh on mobile
 
 Note: a service worker cache was considered but removed — service workers require HTTPS, and this app runs over plain HTTP on LAN.
+
+## Mobile Responsive Behavior
+
+Two CSS media queries handle mobile layout in `static/styles.css`:
+
+- **`@media (max-width: 640px)`** — small screen layout adjustments (padding, font sizes, flex stacking). Does NOT apply to iPhones in landscape or larger phones.
+- **`@media (pointer: coarse)`** — touch device targeting regardless of screen size. Used for: hiding "Advance to Next Show" button, enabling `flex-wrap` on the schedule header so buttons don't overflow, shrinking label/button text, and splitting the combined Ki Pro deck button into separate status dot + record button (avoids iOS `::after` pseudo-element rendering issues on `<button>` elements).
+
+When adding mobile-specific styles, prefer `pointer: coarse` over `max-width` breakpoints — it reliably targets phones and tablets at any orientation.
 
 The app is also accessible externally via a Cloudflare tunnel (`PUBLIC_URL`). The `/edit` page is password-protected when `EDIT_PASSWORD` is set.
