@@ -43,7 +43,7 @@ def _select_store():
 
 store = _select_store()
 from app.models import ACT_CATEGORIES, Act
-from app.slip import calculate_slip, format_variance
+from app.slip import calculate_slip, format_variance, summarize_show
 from app.websocket import manager
 
 # Art-Net listener (initialized on startup if enabled)
@@ -704,6 +704,29 @@ async def admin_import_json(request: Request, _=Depends(_require_edit_auth)):
     await broadcast_schedule_update()
     from fastapi.responses import RedirectResponse
     return RedirectResponse(f"/admin/shows/{show_id}", status_code=303)
+
+
+@app.get("/history", response_class=HTMLResponse)
+async def history(request: Request, _=Depends(_require_edit_auth)):
+    """Per-show slip/variance summary across retained + archived shows."""
+    _require_sqlite()
+    entries = []
+    for show in store.list_shows():
+        payload = store.export_show(show["id"])
+        if payload is None:
+            continue
+        summary = summarize_show(payload)
+        summary["id"] = show["id"]
+        entries.append(summary)
+    entries.sort(key=lambda e: (not e["is_current"], e["is_archived"], e["name"]))
+    context = {
+        "request": request,
+        "app_version": APP_VERSION,
+        "data_backend": settings.DATA_BACKEND,
+        "entries": entries,
+        "format_variance": format_variance,
+    }
+    return templates.TemplateResponse(request, "history.html", context)
 
 
 @app.post("/api/reset")

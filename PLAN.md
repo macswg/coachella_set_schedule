@@ -4,7 +4,7 @@ Live index for the internal-DB feature. See `PRD.md#internal-database-backend` f
 
 **Epic:** [#30](https://github.com/macswg/coachella_set_schedule/issues/30)
 **Branch:** `internal_database`
-**Status:** Phases 1–6 complete. Phase 7 up next.
+**Status:** All phases complete. Feature ready to merge.
 
 ## Phases
 
@@ -16,7 +16,7 @@ Live index for the internal-DB feature. See `PRD.md#internal-database-backend` f
 | 4 | Schedule editor UI + category field | [plans/phase-04-editor-ui.md](plans/phase-04-editor-ui.md) | [#34](https://github.com/macswg/coachella_set_schedule/issues/34) | ✅ done (`3ae39fa`, `c5a1582`) |
 | 5 | Multi-show retention | [plans/phase-05-retention.md](plans/phase-05-retention.md) | [#35](https://github.com/macswg/coachella_set_schedule/issues/35) | ✅ done |
 | 6 | Export (JSON + CSV) | [plans/phase-06-export.md](plans/phase-06-export.md) | [#36](https://github.com/macswg/coachella_set_schedule/issues/36) | ✅ done |
-| 7 | Analytics (stretch) | [plans/phase-07-analytics.md](plans/phase-07-analytics.md) | [#37](https://github.com/macswg/coachella_set_schedule/issues/37) | pending |
+| 7 | Analytics (stretch) | [plans/phase-07-analytics.md](plans/phase-07-analytics.md) | [#37](https://github.com/macswg/coachella_set_schedule/issues/37) | ✅ done |
 
 ## Scope adds landed after original plan
 

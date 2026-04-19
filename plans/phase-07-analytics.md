@@ -1,7 +1,8 @@
 # Phase 7 — Analytics (stretch)
 
-**Issue:** [#37](https://github.com/macswg/coachella_set_schedule/issues/37)
+**Issue:** [#37](https://github.com/macswg/coachella_set_schedule/issues/37) — closed
 **Epic:** [#30](https://github.com/macswg/coachella_set_schedule/issues/30)
+**Status:** ✅ done
 **Depends on:** Phase 5
 
 ## Context

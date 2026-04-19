@@ -1,7 +1,7 @@
 from datetime import datetime, time, timedelta
-from typing import Optional
+from typing import Iterable, Optional
 
-from app.models import Act
+from app.models import Act, infer_category
 
 
 def time_to_datetime(t: time) -> datetime:
@@ -74,3 +74,81 @@ def format_variance(seconds: Optional[int]) -> str:
         return f"+{format_duration(seconds)}"
     else:
         return format_duration(seconds)
+
+
+def summarize_show(show_payload: dict) -> dict:
+    """Aggregate stats for a show export payload (from sqlite_store.export_show).
+
+    Returns: {act_count, set_count, started_count, completed_count,
+              max_start_variance_seconds, max_end_variance_seconds,
+              avg_start_variance_seconds, avg_end_variance_seconds}
+    Variances are computed only for acts that recorded times; means skip Nones.
+    """
+    def _parse(value):
+        if not value:
+            return None
+        for fmt in ("%H:%M:%S", "%H:%M"):
+            try:
+                return datetime.strptime(value, fmt).time()
+            except ValueError:
+                continue
+        return None
+
+    def _signed_variance(scheduled, actual):
+        if scheduled is None or actual is None:
+            return None
+        scheduled_dt = datetime.combine(datetime.today(), scheduled)
+        actual_dt = datetime.combine(datetime.today(), actual)
+        if actual_dt < scheduled_dt - timedelta(hours=12):
+            actual_dt += timedelta(days=1)
+        return int((actual_dt - scheduled_dt).total_seconds())
+
+    act_count = 0
+    set_count = 0
+    started = 0
+    completed = 0
+    start_variances: list[int] = []
+    end_variances: list[int] = []
+    for a in show_payload.get("acts", []):
+        category = (a.get("category") or infer_category(a.get("act_name", ""))).lower()
+        act_count += 1
+        is_set = category == "set"
+        if is_set:
+            set_count += 1
+        sched_s = _parse(a.get("scheduled_start"))
+        sched_e = _parse(a.get("scheduled_end"))
+        act_s = _parse(a.get("actual_start"))
+        act_e = _parse(a.get("actual_end"))
+        if act_s is not None:
+            started += 1
+        if act_s is not None and act_e is not None:
+            completed += 1
+        sv = _signed_variance(sched_s, act_s)
+        ev = _signed_variance(sched_e, act_e)
+        if sv is not None:
+            start_variances.append(sv)
+        if ev is not None:
+            end_variances.append(ev)
+
+    def _avg(values: list[int]) -> Optional[int]:
+        return int(sum(values) / len(values)) if values else None
+
+    def _max(values: list[int]) -> Optional[int]:
+        return max(values) if values else None
+
+    denom = set_count if set_count else act_count
+    return {
+        "name": show_payload.get("name"),
+        "act_count": act_count,
+        "set_count": set_count,
+        "started_count": started,
+        "completed_count": completed,
+        "pct_started": round(100 * started / denom, 1) if denom else 0.0,
+        "pct_completed": round(100 * completed / denom, 1) if denom else 0.0,
+        "max_start_variance_seconds": _max(start_variances),
+        "max_end_variance_seconds": _max(end_variances),
+        "avg_start_variance_seconds": _avg(start_variances),
+        "avg_end_variance_seconds": _avg(end_variances),
+        "is_current": show_payload.get("is_current", False),
+        "is_archived": show_payload.get("is_archived", False),
+    }

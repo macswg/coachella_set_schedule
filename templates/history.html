@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Show history{% endblock %}
+{% block content %}
+<main class="admin">
+    <header class="admin-header">
+        <h1>Show history</h1>
+        <nav><a href="/admin">&larr; Admin</a> · <a href="/edit">Operator</a></nav>
+    </header>
+
+    {% if data_backend != "sqlite" %}
+    <section class="admin-warning">
+        <p>History is only available when <code>DATA_BACKEND=sqlite</code>.</p>
+    </section>
+    {% elif not entries %}
+    <section class="admin-section">
+        <p class="admin-empty">No shows yet.</p>
+    </section>
+    {% else %}
+    <section class="admin-section">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Show</th>
+                    <th>Sets</th>
+                    <th>Started</th>
+                    <th>Completed</th>
+                    <th>Max start var.</th>
+                    <th>Max end var.</th>
+                    <th>Avg start var.</th>
+                    <th>Avg end var.</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in entries %}
+                <tr>
+                    <td>
+                        <a href="/admin/shows/{{ e.id }}">{{ e.name }}</a>
+                        {% if e.is_current %}<span class="badge badge-current">current</span>{% endif %}
+                        {% if e.is_archived %}<span class="badge badge-archived">archived</span>{% endif %}
+                    </td>
+                    <td>{{ e.set_count }}</td>
+                    <td>{{ e.started_count }} ({{ e.pct_started }}%)</td>
+                    <td>{{ e.completed_count }} ({{ e.pct_completed }}%)</td>
+                    <td>{{ format_variance(e.max_start_variance_seconds) or "—" }}</td>
+                    <td>{{ format_variance(e.max_end_variance_seconds) or "—" }}</td>
+                    <td>{{ format_variance(e.avg_start_variance_seconds) or "—" }}</td>
+                    <td>{{ format_variance(e.avg_end_variance_seconds) or "—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+    {% endif %}
+</main>
+{% endblock %}
