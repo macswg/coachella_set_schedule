@@ -48,6 +48,27 @@ def _current_show(session: Session) -> Optional[Show]:
     return session.scalars(stmt).first()
 
 
+def _previous_show(session: Session) -> Optional[Show]:
+    stmt = select(Show).where(Show.is_previous.is_(True), Show.is_archived.is_(False))
+    return session.scalars(stmt).first()
+
+
+def _enforce_archive_retention(session: Session) -> None:
+    """Delete archived shows beyond ARCHIVE_RETENTION_COUNT, oldest first."""
+    cap = settings.ARCHIVE_RETENTION_COUNT
+    if cap <= 0:
+        return
+    stmt = (
+        select(Show)
+        .where(Show.is_archived.is_(True))
+        .order_by(Show.position.asc(), Show.id.asc())
+    )
+    archived = list(session.scalars(stmt))
+    overflow = len(archived) - cap
+    for victim in archived[:max(0, overflow)]:
+        session.delete(victim)
+
+
 def _row_to_act(row: ActRow, *, running_session_start: Optional[time] = None) -> Act:
     return Act(
         act_name=row.act_name,
@@ -262,9 +283,11 @@ def get_next_show() -> str:
 
 
 def advance_show() -> str:
-    """Demote current to previous (if any), promote next to current.
+    """Demote current to previous, archive the old previous, promote next to current.
 
-    Clears in-memory screentime session tracking.
+    Retention policy: keep exactly one `current` and one `previous` live.
+    Everything else stays in the archive (oldest purged beyond
+    ARCHIVE_RETENTION_COUNT). Clears in-memory screentime session tracking.
     """
     global _screentime_sessions
     with _session() as session:
@@ -273,9 +296,10 @@ def advance_show() -> str:
         if nxt is None:
             raise ValueError("Already on the last show")
 
-        # Clear any prior is_previous
+        # Archive any existing previous show
         for prev in session.scalars(select(Show).where(Show.is_previous.is_(True))):
             prev.is_previous = False
+            prev.is_archived = True
 
         if current is not None:
             current.is_current = False
@@ -283,11 +307,37 @@ def advance_show() -> str:
 
         nxt.is_current = True
         nxt.is_previous = False
+        nxt.is_archived = False
+
+        _enforce_archive_retention(session)
         session.commit()
         new_name = nxt.name
 
     _screentime_sessions = {}
     return new_name
+
+
+def archive_show(show_id: int) -> None:
+    """Explicitly archive a show (for manual cleanup)."""
+    with _session() as session:
+        show = session.get(Show, show_id)
+        if show is None:
+            raise ValueError(f"Show id={show_id} not found")
+        show.is_current = False
+        show.is_previous = False
+        show.is_archived = True
+        _enforce_archive_retention(session)
+        session.commit()
+
+
+def restore_show(show_id: int) -> None:
+    """Un-archive a show without promoting it to current."""
+    with _session() as session:
+        show = session.get(Show, show_id)
+        if show is None:
+            raise ValueError(f"Show id={show_id} not found")
+        show.is_archived = False
+        session.commit()
 
 
 # ----------------------------------------------------------------------------

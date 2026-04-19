@@ -21,6 +21,9 @@ class Settings:
     # SQLite database file path (used when DATA_BACKEND=sqlite)
     SQLITE_PATH: str = os.getenv("SQLITE_PATH", "./data/schedule.db")
 
+    # Retention: how many archived shows to keep before the oldest are purged.
+    ARCHIVE_RETENTION_COUNT: int = int(os.getenv("ARCHIVE_RETENTION_COUNT", "20"))
+
     # Google Sheets configuration
     USE_GOOGLE_SHEETS: bool = os.getenv("USE_GOOGLE_SHEETS", "false").lower() == "true"
     GOOGLE_SHEETS_ID: str = os.getenv("GOOGLE_SHEETS_ID", "")

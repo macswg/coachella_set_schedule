@@ -1964,3 +1964,9 @@ body {
     font-size: 0.85rem;
     min-width: 110px;
 }
+
+.admin-hint {
+    color: var(--text-muted, #888);
+    font-size: 0.85rem;
+    margin: 0 0 0.75rem;
+}

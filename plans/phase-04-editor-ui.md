@@ -1,9 +1,18 @@
 # Phase 4 — Schedule Editor UI
 
-**Issue:** [#34](https://github.com/macswg/coachella_set_schedule/issues/34)
+**Issue:** [#34](https://github.com/macswg/coachella_set_schedule/issues/34) — closed
 **Epic:** [#30](https://github.com/macswg/coachella_set_schedule/issues/30)
+**Status:** ✅ done in commits `3ae39fa` (admin UI) + `c5a1582` (category field)
 **Depends on:** Phase 3
 **Blocks:** Phase 5 (clean dependency), Phase 6
+
+## Delivered (vs. spec)
+
+- All planned show/act CRUD routes and templates.
+- JSON upload import.
+- "Set current show" action.
+- **Scope add:** explicit `category` field on `Act` with dropdown per row (set/loadin/ondeck/changeover/preshow/end). Name-based fallback preserved for Sheets backend.
+- **Deferred:** "Import from Sheets" helper — JSON upload covers the common case; sheets import can follow if needed.
 
 ## Context
 

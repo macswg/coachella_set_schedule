@@ -1,7 +1,8 @@
 # Phase 3 — Backend Selector + Config
 
-**Issue:** [#33](https://github.com/macswg/coachella_set_schedule/issues/33)
+**Issue:** [#33](https://github.com/macswg/coachella_set_schedule/issues/33) — closed
 **Epic:** [#30](https://github.com/macswg/coachella_set_schedule/issues/30)
+**Status:** ✅ done in commit `f0cdf15`
 **Depends on:** Phase 2
 **Blocks:** Phase 4
 

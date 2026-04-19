@@ -1,7 +1,8 @@
 # Phase 1 — Foundation & Schema
 
-**Issue:** [#31](https://github.com/macswg/coachella_set_schedule/issues/31)
+**Issue:** [#31](https://github.com/macswg/coachella_set_schedule/issues/31) — closed
 **Epic:** [#30](https://github.com/macswg/coachella_set_schedule/issues/30)
+**Status:** ✅ done in commit `f0cdf15`
 **Depends on:** nothing
 **Blocks:** Phase 2
 

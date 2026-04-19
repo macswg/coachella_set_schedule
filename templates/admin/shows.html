@@ -15,21 +15,21 @@
     {% else %}
 
     <section class="admin-section">
-        <h2>Shows</h2>
-        {% if shows %}
+        <h2>Live shows</h2>
+        {% set live_shows = shows | selectattr("is_archived", "equalto", false) | list %}
+        {% if live_shows %}
         <table class="admin-table">
             <thead>
                 <tr><th>Name</th><th>Acts</th><th>Status</th><th>Actions</th></tr>
             </thead>
             <tbody>
-                {% for show in shows %}
+                {% for show in live_shows %}
                 <tr>
                     <td><a href="/admin/shows/{{ show.id }}">{{ show.name }}</a></td>
                     <td>{{ show.act_count }}</td>
                     <td>
                         {% if show.is_current %}<span class="badge badge-current">current</span>{% endif %}
                         {% if show.is_previous %}<span class="badge badge-previous">previous</span>{% endif %}
-                        {% if show.is_archived %}<span class="badge badge-archived">archived</span>{% endif %}
                     </td>
                     <td class="admin-actions">
                         {% if not show.is_current %}
@@ -37,6 +37,9 @@
                             <button type="submit">Set current</button>
                         </form>
                         {% endif %}
+                        <form method="post" action="/admin/shows/{{ show.id }}/archive" style="display:inline">
+                            <button type="submit">Archive</button>
+                        </form>
                         <form method="post" action="/admin/shows/{{ show.id }}/delete"
                               onsubmit="return confirm('Delete show {{ show.name|e }}? This removes all acts.');"
                               style="display:inline">
@@ -48,9 +51,40 @@
             </tbody>
         </table>
         {% else %}
-        <p class="admin-empty">No shows yet. Create one below.</p>
+        <p class="admin-empty">No live shows. Create one below.</p>
         {% endif %}
     </section>
+
+    {% set archived_shows = shows | selectattr("is_archived") | list %}
+    {% if archived_shows %}
+    <section class="admin-section">
+        <h2>Archived</h2>
+        <p class="admin-hint">Archive keeps the last {{ archive_retention }} shows. Older ones are purged automatically.</p>
+        <table class="admin-table">
+            <thead>
+                <tr><th>Name</th><th>Acts</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+                {% for show in archived_shows %}
+                <tr>
+                    <td><a href="/admin/shows/{{ show.id }}">{{ show.name }}</a></td>
+                    <td>{{ show.act_count }}</td>
+                    <td class="admin-actions">
+                        <form method="post" action="/admin/shows/{{ show.id }}/restore" style="display:inline">
+                            <button type="submit">Restore</button>
+                        </form>
+                        <form method="post" action="/admin/shows/{{ show.id }}/delete"
+                              onsubmit="return confirm('Permanently delete {{ show.name|e }}?');"
+                              style="display:inline">
+                            <button type="submit" class="btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+    {% endif %}
 
     <section class="admin-section">
         <h2>New show</h2>

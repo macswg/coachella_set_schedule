@@ -1,7 +1,8 @@
 # Phase 5 — Multi-show Retention
 
-**Issue:** [#35](https://github.com/macswg/coachella_set_schedule/issues/35)
+**Issue:** [#35](https://github.com/macswg/coachella_set_schedule/issues/35) — closed
 **Epic:** [#30](https://github.com/macswg/coachella_set_schedule/issues/30)
+**Status:** ✅ done
 **Depends on:** Phase 4
 
 ## Context

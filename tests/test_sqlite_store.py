@@ -202,6 +202,53 @@ def test_delete_act_removes_row(store):
     assert all(a["id"] != victim_id for a in detail["acts"])
 
 
+# --- retention (Phase 5) ---
+
+def test_advance_show_archives_old_previous(store):
+    store.create_show("W1Shw2", make_current=False)
+    store.add_act("W1Shw2", act_name="Opener", scheduled_start=time(10, 0))
+    store.advance_show()
+    shows = {s["name"]: s for s in store.list_shows()}
+    assert shows["W1Shw2"]["is_current"] is True
+    assert shows["W1Shw1"]["is_previous"] is True
+    assert shows["W1Shw1"]["is_archived"] is False
+
+    store.create_show("W1Shw3", make_current=False)
+    store.add_act("W1Shw3", act_name="Closer", scheduled_start=time(20, 0))
+    store.advance_show()
+    shows = {s["name"]: s for s in store.list_shows()}
+    assert shows["W1Shw3"]["is_current"] is True
+    assert shows["W1Shw2"]["is_previous"] is True
+    assert shows["W1Shw1"]["is_archived"] is True  # the old previous got archived
+
+
+def test_archive_retention_purges_beyond_cap(store, monkeypatch):
+    # Force a tiny archive cap
+    from app.config import settings as app_settings
+    monkeypatch.setattr(app_settings, "ARCHIVE_RETENTION_COUNT", 1)
+
+    # Seed 4 future shows; advance 3 times. Old previous gets archived each
+    # advance, but only the most-recent archived survives the cap-1 purge.
+    for idx in range(2, 6):
+        store.create_show(f"W1Shw{idx}", make_current=False)
+        store.add_act(f"W1Shw{idx}", act_name="Placeholder", scheduled_start=time(12, 0))
+    store.advance_show()
+    store.advance_show()
+    store.advance_show()
+
+    archived = [s for s in store.list_shows() if s["is_archived"]]
+    assert len(archived) == 1
+
+
+def test_archive_and_restore(store):
+    store.create_show("W1Shw2", make_current=False)
+    w2 = next(s for s in store.list_shows() if s["name"] == "W1Shw2")
+    store.archive_show(w2["id"])
+    assert next(s for s in store.list_shows() if s["id"] == w2["id"])["is_archived"] is True
+    store.restore_show(w2["id"])
+    assert next(s for s in store.list_shows() if s["id"] == w2["id"])["is_archived"] is False
+
+
 def test_import_show_from_json(store):
     payload = {
         "name": "Imported",

@@ -1,7 +1,8 @@
 # Phase 2 — SQLite Store Backend
 
-**Issue:** [#32](https://github.com/macswg/coachella_set_schedule/issues/32)
+**Issue:** [#32](https://github.com/macswg/coachella_set_schedule/issues/32) — closed
 **Epic:** [#30](https://github.com/macswg/coachella_set_schedule/issues/30)
+**Status:** ✅ done in commit `f0cdf15`
 **Depends on:** Phase 1
 **Blocks:** Phase 3, 4
 

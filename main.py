@@ -475,6 +475,7 @@ async def admin_shows(request: Request, _=Depends(_require_edit_auth)):
         "app_version": APP_VERSION,
         "data_backend": settings.DATA_BACKEND,
         "shows": store.list_shows() if settings.DATA_BACKEND == "sqlite" else [],
+        "archive_retention": settings.ARCHIVE_RETENTION_COUNT,
     }
     return templates.TemplateResponse(request, "admin/shows.html", context)
 
@@ -508,6 +509,23 @@ async def admin_set_current_show(show_id: int, _=Depends(_require_edit_auth)):
     _require_sqlite()
     store.set_current_show(show_id)
     await broadcast_schedule_update()
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse("/admin", status_code=303)
+
+
+@app.post("/admin/shows/{show_id}/archive")
+async def admin_archive_show(show_id: int, _=Depends(_require_edit_auth)):
+    _require_sqlite()
+    store.archive_show(show_id)
+    await broadcast_schedule_update()
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse("/admin", status_code=303)
+
+
+@app.post("/admin/shows/{show_id}/restore")
+async def admin_restore_show(show_id: int, _=Depends(_require_edit_auth)):
+    _require_sqlite()
+    store.restore_show(show_id)
     from fastapi.responses import RedirectResponse
     return RedirectResponse("/admin", status_code=303)
 
