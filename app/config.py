@@ -11,6 +11,16 @@ APP_VERSION = _version_file.read_text().strip() if _version_file.exists() else "
 class Settings:
     """Application settings loaded from environment variables."""
 
+    # Data backend selection: "sheets" | "sqlite" | "memory"
+    # Falls back to interpreting legacy USE_GOOGLE_SHEETS when DATA_BACKEND is unset.
+    DATA_BACKEND: str = (
+        os.getenv("DATA_BACKEND")
+        or ("sheets" if os.getenv("USE_GOOGLE_SHEETS", "false").lower() == "true" else "memory")
+    ).lower()
+
+    # SQLite database file path (used when DATA_BACKEND=sqlite)
+    SQLITE_PATH: str = os.getenv("SQLITE_PATH", "./data/schedule.db")
+
     # Google Sheets configuration
     USE_GOOGLE_SHEETS: bool = os.getenv("USE_GOOGLE_SHEETS", "false").lower() == "true"
     GOOGLE_SHEETS_ID: str = os.getenv("GOOGLE_SHEETS_ID", "")

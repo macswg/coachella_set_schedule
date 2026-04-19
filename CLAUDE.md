@@ -116,12 +116,27 @@ coachella_set_schedule/
     └── ...                   # API, store, and sheets tests
 ```
 
-## Switching to Google Sheets
+## Data Backends
 
-To use Google Sheets instead of mock data:
+The app supports three pluggable backends, selected at startup via `DATA_BACKEND`:
+
+| Value | Description |
+|-------|-------------|
+| `sheets` | Google Sheets (requires service account + sheet ID). Historical default. |
+| `sqlite` | Internal SQLite DB at `SQLITE_PATH` (default `./data/schedule.db`). Schedules edited in-app via `/admin`. Alembic migrations run on startup. |
+| `memory` | In-process mock data. Resets on restart. Dev only. |
+
+`USE_GOOGLE_SHEETS=true` is deprecated; when `DATA_BACKEND` is unset it falls back to `sheets` if `USE_GOOGLE_SHEETS=true`, otherwise `memory`.
+
+### Switching to Google Sheets
 1. Copy `.env.example` to `.env` and fill in your values
-2. Set `USE_GOOGLE_SHEETS=true` in `.env`
+2. Set `DATA_BACKEND=sheets` in `.env`
 3. Configure `GOOGLE_SHEETS_ID`, `GOOGLE_SHEET_TAB`, and `GOOGLE_SERVICE_ACCOUNT_FILE`
+
+### Switching to SQLite
+1. Set `DATA_BACKEND=sqlite` in `.env`
+2. (Optional) Set `SQLITE_PATH` to change the DB file location
+3. On first start, Alembic creates the schema. Use `/admin` to create a show and add acts.
 
 The app polls Google Sheets every 30 seconds (configurable via `POLL_INTERVAL_SECONDS` in `main.py`) and broadcasts updates to all connected clients.
 

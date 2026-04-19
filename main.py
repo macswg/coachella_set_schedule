@@ -1,4 +1,5 @@
 import asyncio
+import os
 import secrets
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
@@ -17,10 +18,30 @@ from app import companion
 from app import notifier
 from app import triggers as trigger_engine
 
-if settings.USE_GOOGLE_SHEETS:
-    from app import sheets as store
-else:
-    from app import store
+def _select_store():
+    """Pick the data backend based on DATA_BACKEND."""
+    backend = settings.DATA_BACKEND
+    if backend == "sheets":
+        from app import sheets as chosen
+    elif backend == "sqlite":
+        from app import sqlite_store as chosen
+    elif backend == "memory":
+        from app import store as chosen
+    else:
+        raise ValueError(
+            f"Invalid DATA_BACKEND={backend!r}; expected one of: sheets, sqlite, memory"
+        )
+
+    # Deprecation warning when the legacy flag was the sole signal
+    if os.getenv("DATA_BACKEND") is None and settings.USE_GOOGLE_SHEETS:
+        print(
+            "[config] USE_GOOGLE_SHEETS is deprecated — set DATA_BACKEND=sheets instead"
+        )
+    print(f"[config] DATA_BACKEND={backend}")
+    return chosen
+
+
+store = _select_store()
 from app.models import Act
 from app.slip import calculate_slip, format_variance
 from app.websocket import manager
@@ -62,6 +83,10 @@ async def on_brightness_change(value: int) -> None:
 async def lifespan(app: FastAPI):
     """Application lifespan handler for startup/shutdown."""
     global artnet_listener, _polling_task
+
+    if settings.DATA_BACKEND == "sqlite":
+        from app.db import init_db
+        init_db()
 
     if settings.ARTNET_ENABLED:
         from app.artnet import ArtNetListener
@@ -134,8 +159,8 @@ def get_template_context(request: Request = None) -> dict:
         "acts": acts,
         "slip": slip,
         "format_variance": format_variance,
-        "sheet_tab": store.get_current_show() if settings.USE_GOOGLE_SHEETS else None,
-        "use_google_sheets": settings.USE_GOOGLE_SHEETS,
+        "sheet_tab": store.get_current_show() if settings.DATA_BACKEND == "sheets" else None,
+        "data_backend": settings.DATA_BACKEND,
         "timezone": settings.TIMEZONE,
         "has_next_show": store.has_next_show(),
         "current_show": store.get_current_show(),
@@ -334,9 +359,9 @@ async def websocket_endpoint(websocket: WebSocket, mode: str = "view"):
 @app.post("/api/show/advance")
 async def advance_show():
     """Advance to the next show tab. Broadcasts a reload to all connected clients."""
-    if not settings.USE_GOOGLE_SHEETS:
+    if settings.DATA_BACKEND == "memory":
         from fastapi import HTTPException
-        raise HTTPException(status_code=400, detail="Multi-show switching requires Google Sheets")
+        raise HTTPException(status_code=400, detail="Multi-show switching requires a persistent backend")
     if not store.has_next_show():
         from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="Already on the last show")
@@ -424,8 +449,8 @@ async def recording_dismiss(act_name: str):
 
 @app.post("/api/reset")
 async def reset_data():
-    """Reset all actual times to None (testing only, disabled when USE_GOOGLE_SHEETS=true)."""
-    if settings.USE_GOOGLE_SHEETS:
+    """Reset all actual times to None (testing only, disabled when DATA_BACKEND=sheets)."""
+    if settings.DATA_BACKEND == "sheets":
         from fastapi import HTTPException
         raise HTTPException(status_code=403, detail="Reset not allowed in production mode")
     acts = store.get_schedule()

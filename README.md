@@ -130,13 +130,19 @@ pkill -f "uvicorn main:app"
 
 All settings via environment variables (`.env` file). See `.env.example` for the full template.
 
-**Google Sheets:**
+**Data backend:**
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `USE_GOOGLE_SHEETS` | `false` | Enable Google Sheets (false = mock data) |
+| `DATA_BACKEND` | `memory` | Store to use: `sheets`, `sqlite`, or `memory` |
+| `SQLITE_PATH` | `./data/schedule.db` | SQLite DB file (when `DATA_BACKEND=sqlite`) |
+
+**Google Sheets** (when `DATA_BACKEND=sheets`):
+| Variable | Default | Description |
+|----------|---------|-------------|
 | `GOOGLE_SHEETS_ID` | — | Spreadsheet ID from URL |
 | `GOOGLE_SHEET_TAB` | — | Worksheet name (blank = first sheet) |
 | `GOOGLE_SERVICE_ACCOUNT_FILE` | — | Path to service account JSON key |
+| `USE_GOOGLE_SHEETS` | `false` | _Deprecated._ Use `DATA_BACKEND=sheets` instead |
 
 **App:**
 | Variable | Default | Description |
@@ -158,7 +164,7 @@ All settings via environment variables (`.env` file). See `.env.example` for the
 1. Create a Google Cloud project and enable the Sheets API
 2. Create a service account and download the JSON key file
 3. Share your spreadsheet with the service account email (editor access)
-4. Set `USE_GOOGLE_SHEETS=true` in `.env` and fill in the sheet ID/tab/key path
+4. Set `DATA_BACKEND=sheets` in `.env` and fill in the sheet ID/tab/key path
 
 **Expected sheet format** (header at row 5, data starts row 6):
 
@@ -246,11 +252,11 @@ coachella_set_schedule/
 
 ## Development & Testing
 
-**Mock data mode:** Set `USE_GOOGLE_SHEETS=false` to use in-memory sample data (8 acts, no external dependencies).
+**Mock data mode:** Set `DATA_BACKEND=memory` to use in-memory sample data (8 acts, no external dependencies).
 
 **Time override:** On `/preview`, use the time input in the header to freeze the clock at a specific time. Toggle **+24h** to simulate times past midnight (e.g. enter `01:30` and toggle +24h to preview 1:30am). Click "Live" to resume real-time.
 
-**Reset endpoint:** `POST /api/reset` clears all actual times and broadcasts the update — useful for demo resets between tests. Disabled (button greyed out) when `USE_GOOGLE_SHEETS=true`.
+**Reset endpoint:** `POST /api/reset` clears all actual times and broadcasts the update — useful for demo resets between tests. Disabled (button greyed out) when `DATA_BACKEND=sheets`.
 
 **Force client reload:** `POST /api/reload` broadcasts a hard-reload command to every connected browser tab via WebSocket. Useful after a container rebuild to ensure all clients pick up new CSS/JS without manually refreshing. Static files are also cache-busted by app version (`styles.css?v=X.X.X`) so bumping `VERSION` + rebuilding guarantees fresh assets.
 

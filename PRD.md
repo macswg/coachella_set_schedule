@@ -149,6 +149,33 @@ No Node.js or build step required. Run with single command: `uvicorn main:app`
 | Timezone handling | Festival local time only (PDT) |
 | Data sync | Google Sheets API (live sync) |
 
+## Internal Database Backend
+
+Google Sheets is powerful for remote schedule editing but introduces a hard dependency on a service account, network reachability, and rate limits. To support deployments that prefer a self-contained system, the app ships a pluggable data backend.
+
+### Goals
+- Each deployment chooses its backend via `DATA_BACKEND` = `sheets` | `sqlite` | `memory`.
+- `sqlite` is a full replacement for Sheets: schedule CRUD happens in-app via a new `/admin` editor.
+- SQLite data is file-backed, survives container restarts, and supports per-show JSON/CSV export.
+- Retention: keep `current` + `previous` show live; older shows archived in a separate table and exportable.
+- No behavioral differences between backends from the operator/viewer perspective — `/edit`, `/stage`, WebSocket sync, slip logic all work identically.
+
+### Non-Goals
+- Postgres/MySQL — SQLite fits the single-process LAN architecture.
+- Cloud hosting, multi-tenant isolation, user accounts.
+- Mirroring writes between Sheets and SQLite simultaneously.
+
+### Phasing
+
+Implementation is tracked in `PLAN.md` with one GH sub-issue per phase:
+1. Foundation & schema
+2. SQLite store backend (parity with `app/sheets.py`)
+3. Backend selector + config (`DATA_BACKEND`)
+4. Schedule editor UI (`/admin`)
+5. Multi-show retention (current + previous live; rest archived)
+6. Export (JSON + CSV per show)
+7. Analytics (`/history` — stretch)
+
 ## Google Sheet Schema
 
 Header row is at row 5; data starts at row 6. The app reads by column position (not header names).

@@ -213,4 +213,8 @@ __marimo__/
 # Local-only materials (per repo guidelines)
 /secret/
 
+# SQLite data directory (internal DB backend)
+/data/*.db
+/data/*.db-journal
+
 .DS_Store
