@@ -1,8 +1,5 @@
 services:
   app:
-    network_mode: bridge
-    ports:
-      - "${PORT:-8000}:${PORT:-8000}"
     volumes:
       - .:/app
       - ./service-account.json:/app/service-account.json

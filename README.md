@@ -95,8 +95,11 @@ cp .env.example .env
 # Docker Compose (recommended)
 docker compose up --build
 
-# Docker Compose — dev mode (auto-reload on file changes)
+# Docker Compose — dev mode on macOS (bridge networking + published port; no Art-Net)
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+# Docker Compose — dev mode on Linux (keeps host networking for Art-Net)
+docker compose -f docker-compose.yml -f docker-compose.linux-dev.yml up
 
 # Development without Docker (auto-reload)
 venv/bin/uvicorn main:app --reload --host 0.0.0.0 --port 8000
@@ -212,7 +215,8 @@ coachella_set_schedule/
 ├── requirements.txt     # Python dependencies
 ├── Dockerfile           # Docker configuration
 ├── docker-compose.yml       # Docker Compose configuration
-├── docker-compose.dev.yml   # Dev override: volume mount + auto-reload
+├── docker-compose.dev.yml       # Dev override (macOS): bridge net + published port + auto-reload
+├── docker-compose.linux-dev.yml # Dev override (Linux): host net for Art-Net + auto-reload
 ├── .env.example         # Environment variables template
 ├── app/
 │   ├── config.py        # Settings from environment
