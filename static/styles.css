@@ -1970,3 +1970,14 @@ body {
     font-size: 0.85rem;
     margin: 0 0 0.75rem;
 }
+
+.admin-btn-link {
+    display: inline-block;
+    padding: 0.4rem 0.8rem;
+    background: var(--accent, #4ade80);
+    color: #0a0a0a;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+.admin-btn-link:hover { opacity: 0.85; }

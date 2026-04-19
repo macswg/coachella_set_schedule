@@ -1,7 +1,8 @@
 # Phase 6 — Export (JSON + CSV)
 
-**Issue:** [#36](https://github.com/macswg/coachella_set_schedule/issues/36)
+**Issue:** [#36](https://github.com/macswg/coachella_set_schedule/issues/36) — closed
 **Epic:** [#30](https://github.com/macswg/coachella_set_schedule/issues/30)
+**Status:** ✅ done
 **Depends on:** Phase 5 (needs archive table to export older shows)
 
 ## Context

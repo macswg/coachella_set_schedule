@@ -249,6 +249,22 @@ def test_archive_and_restore(store):
     assert next(s for s in store.list_shows() if s["id"] == w2["id"])["is_archived"] is False
 
 
+def test_export_show_round_trip(store):
+    payload = store.export_show(1)
+    assert payload is not None
+    assert payload["name"] == "W1Shw1"
+    names = [a["act_name"] for a in payload["acts"]]
+    assert FIRST_ACT in names
+    # scheduled times are serialized as strings
+    sunrise = next(a for a in payload["acts"] if a["act_name"] == FIRST_ACT)
+    assert sunrise["scheduled_start"] == "11:30:00"
+    assert sunrise["scheduled_end"] == "12:00:00"
+
+
+def test_export_show_missing_returns_none(store):
+    assert store.export_show(9999) is None
+
+
 def test_import_show_from_json(store):
     payload = {
         "name": "Imported",

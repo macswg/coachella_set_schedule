@@ -16,6 +16,15 @@
     </section>
 
     <section class="admin-section">
+        <h2>Export</h2>
+        <p class="admin-hint">Download this show as JSON (full data) or CSV (matches the Google Sheet column layout).</p>
+        <div class="admin-form">
+            <a class="admin-btn-link" href="/admin/shows/{{ show.id }}/export.json">Download JSON</a>
+            <a class="admin-btn-link" href="/admin/shows/{{ show.id }}/export.csv">Download CSV</a>
+        </div>
+    </section>
+
+    <section class="admin-section">
         <h2>Acts</h2>
         {% if show.acts %}
         <ul class="admin-acts">

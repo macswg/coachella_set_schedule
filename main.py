@@ -621,6 +621,70 @@ async def admin_move_act(act_id: int, request: Request, _=Depends(_require_edit_
     return RedirectResponse(referer, status_code=303)
 
 
+def _format_screentime(seconds: int) -> str:
+    hours = seconds // 3600
+    mins = (seconds % 3600) // 60
+    secs = seconds % 60
+    return f"{hours}:{mins:02d}:{secs:02d}"
+
+
+@app.get("/admin/shows/{show_id}/export.json")
+async def admin_export_json(show_id: int, _=Depends(_require_edit_auth)):
+    _require_sqlite()
+    payload = store.export_show(show_id)
+    if payload is None:
+        raise HTTPException(status_code=404, detail="Show not found")
+    from datetime import date as _date
+    from fastapi.responses import Response
+    import json
+    filename = f"{payload['name']}_{_date.today().isoformat()}.json"
+    return Response(
+        content=json.dumps(payload, indent=2),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.get("/admin/shows/{show_id}/export.csv")
+async def admin_export_csv(show_id: int, _=Depends(_require_edit_auth)):
+    _require_sqlite()
+    payload = store.export_show(show_id)
+    if payload is None:
+        raise HTTPException(status_code=404, detail="Show not found")
+    import csv
+    import io
+    from datetime import date as _date
+    from fastapi.responses import Response
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    # Columns match the Sheet layout documented in CLAUDE.md (C-H).
+    writer.writerow([
+        "act_name",
+        "scheduled_start",
+        "scheduled_end",
+        "actual_start",
+        "actual_end",
+        "screentime_total",
+    ])
+    for a in payload["acts"]:
+        writer.writerow([
+            a["act_name"],
+            a["scheduled_start"] or "",
+            a["scheduled_end"] or "",
+            a["actual_start"] or "",
+            a["actual_end"] or "",
+            _format_screentime(a["screentime_total_seconds"] or 0) if a.get("screentime_total_seconds") else "",
+        ])
+
+    filename = f"{payload['name']}_{_date.today().isoformat()}.csv"
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @app.post("/admin/import/json")
 async def admin_import_json(request: Request, _=Depends(_require_edit_auth)):
     _require_sqlite()

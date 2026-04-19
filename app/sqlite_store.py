@@ -539,6 +539,37 @@ def move_act(act_id: int, direction: str) -> None:
         session.commit()
 
 
+def export_show(show_id: int) -> Optional[dict]:
+    """Return a serializable export payload for a show (live or archived)."""
+    with _session() as session:
+        show = session.get(Show, show_id)
+        if show is None:
+            return None
+
+        def _fmt_time(t: Optional[time]) -> Optional[str]:
+            return t.strftime("%H:%M:%S") if t else None
+
+        return {
+            "name": show.name,
+            "is_archived": show.is_archived,
+            "is_current": show.is_current,
+            "is_previous": show.is_previous,
+            "acts": [
+                {
+                    "row_index": a.row_index,
+                    "act_name": a.act_name,
+                    "category": a.category or infer_category(a.act_name),
+                    "scheduled_start": _fmt_time(a.scheduled_start),
+                    "scheduled_end": _fmt_time(a.scheduled_end),
+                    "actual_start": _fmt_time(a.actual_start),
+                    "actual_end": _fmt_time(a.actual_end),
+                    "screentime_total_seconds": a.screentime_total_seconds,
+                }
+                for a in show.acts
+            ],
+        }
+
+
 def import_show_from_json(payload: dict) -> int:
     """Import a show from a JSON payload. Returns the new show id.
 
