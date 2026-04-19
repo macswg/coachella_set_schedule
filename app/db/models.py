@@ -41,6 +41,7 @@ class Act(Base):
     actual_end: Mapped[Optional[time]] = mapped_column(Time, nullable=True)
     screentime_total_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     screentime_session_start: Mapped[Optional[time]] = mapped_column(Time, nullable=True)
+    category: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     show: Mapped[Show] = relationship(back_populates="acts")
 

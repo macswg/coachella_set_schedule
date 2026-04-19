@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.db.engine import get_engine
 from app.db.models import Act as ActRow, Show
-from app.models import Act, time_to_secs
+from app.models import ACT_CATEGORIES, Act, infer_category, time_to_secs
 
 
 # In-memory screentime session tracking (parallels the Sheets store pattern).
@@ -57,6 +57,7 @@ def _row_to_act(row: ActRow, *, running_session_start: Optional[time] = None) ->
         actual_end=row.actual_end,
         screentime_total_seconds=row.screentime_total_seconds,
         screentime_session_start=running_session_start or row.screentime_session_start,
+        category=row.category,
     )
 
 
@@ -116,6 +117,7 @@ def get_schedule() -> list[Act]:
                 actual_end=row.actual_end,
                 screentime_total_seconds=row.screentime_total_seconds,
                 screentime_session_start=_screentime_sessions.get(row.act_name, row.screentime_session_start),
+                category=row.category,
             )
         )
     return acts
@@ -317,6 +319,7 @@ def add_act(
     scheduled_start: Optional[time],
     scheduled_end: Optional[time] = None,
     row_index: Optional[int] = None,
+    category: Optional[str] = None,
 ) -> ActRow:
     with _session() as session:
         show = session.scalars(select(Show).where(Show.name == show_name)).first()
@@ -324,12 +327,14 @@ def add_act(
             raise ValueError(f"Show {show_name!r} not found")
         if row_index is None:
             row_index = (max((a.row_index for a in show.acts), default=-1)) + 1
+        resolved_category = category if category in ACT_CATEGORIES else infer_category(act_name)
         row = ActRow(
             show_id=show.id,
             row_index=row_index,
             act_name=act_name,
             scheduled_start=scheduled_start,
             scheduled_end=scheduled_end,
+            category=resolved_category,
         )
         session.add(row)
         session.commit()
@@ -383,6 +388,7 @@ def get_show_detail(show_id: int) -> Optional[dict]:
                     "act_name": a.act_name,
                     "scheduled_start": a.scheduled_start,
                     "scheduled_end": a.scheduled_end,
+                    "category": a.category or infer_category(a.act_name),
                 }
                 for a in show.acts
             ],
@@ -428,6 +434,7 @@ def update_act(
     scheduled_start: Optional[time] = None,
     scheduled_end: Optional[time] = None,
     clear_end: bool = False,
+    category: Optional[str] = None,
 ) -> None:
     with _session() as session:
         row = session.get(ActRow, act_id)
@@ -441,6 +448,8 @@ def update_act(
             row.scheduled_end = None
         elif scheduled_end is not None:
             row.scheduled_end = scheduled_end
+        if category is not None and category in ACT_CATEGORIES:
+            row.category = category
         session.commit()
 
 
@@ -509,5 +518,6 @@ def import_show_from_json(payload: dict) -> int:
             act_name=entry["act_name"],
             scheduled_start=_parse(entry.get("scheduled_start")),
             scheduled_end=_parse(entry.get("scheduled_end")),
+            category=entry.get("category"),
         )
     return show.id

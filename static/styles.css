@@ -1954,3 +1954,13 @@ body {
     font-size: 0.85rem;
 }
 .btn-admin:hover { opacity: 0.85; }
+
+.admin-category {
+    background: var(--bg-input, #1a1a1a);
+    color: var(--text);
+    border: 1px solid var(--border, #333);
+    border-radius: 4px;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.85rem;
+    min-width: 110px;
+}

@@ -7,6 +7,27 @@ def time_to_secs(t: time) -> int:
     return t.hour * 3600 + t.minute * 60 + t.second
 
 
+# Valid category values for an Act. `set` is the default (artist onstage).
+ACT_CATEGORIES = ("set", "loadin", "ondeck", "changeover", "preshow", "end")
+
+
+def infer_category(act_name: str) -> str:
+    """Fallback category detection from act_name, used when category is unset
+    (e.g. rows read from Google Sheets)."""
+    n = act_name.lower()
+    if n.strip() in ("end", "end of show"):
+        return "end"
+    if "load in" in n:
+        return "loadin"
+    if "on deck" in n or "stage time" in n:
+        return "ondeck"
+    if "changeover" in n:
+        return "changeover"
+    if "preshow" in n:
+        return "preshow"
+    return "set"
+
+
 class Act(BaseModel):
     """Represents a single act in the festival schedule."""
 
@@ -17,36 +38,38 @@ class Act(BaseModel):
     actual_end: Optional[time] = None
     screentime_total_seconds: int = 0
     screentime_session_start: Optional[time] = None
+    category: Optional[str] = None  # one of ACT_CATEGORIES, or None to use name-based fallback
+
+    @computed_field
+    @property
+    def effective_category(self) -> str:
+        """Category to use for UI/logic decisions: explicit value if set, else inferred from name."""
+        return self.category if self.category in ACT_CATEGORIES else infer_category(self.act_name)
 
     @computed_field
     @property
     def is_loadin(self) -> bool:
-        """Returns True if this is a load-in row (informational only, no buttons)."""
-        return 'load in' in self.act_name.lower()
+        return self.effective_category == "loadin"
 
     @computed_field
     @property
     def is_ondeck(self) -> bool:
-        """Returns True if this is an on-deck row (screentime buttons only)."""
-        return 'on deck' in self.act_name.lower() or 'stage time' in self.act_name.lower()
+        return self.effective_category == "ondeck"
 
     @computed_field
     @property
     def is_changeover(self) -> bool:
-        """Returns True if this is a changeover row (no recording trigger)."""
-        return 'changeover' in self.act_name.lower()
+        return self.effective_category == "changeover"
 
     @computed_field
     @property
     def is_end_of_show(self) -> bool:
-        """Returns True if this is an end-of-show marker row (e.g. 'END' or 'END OF SHOW')."""
-        return self.act_name.lower().strip() in ('end', 'end of show')
+        return self.effective_category == "end"
 
     @computed_field
     @property
     def is_preshow(self) -> bool:
-        """Returns True if this is a preshow row (no recording trigger, no set buttons)."""
-        return 'preshow' in self.act_name.lower()
+        return self.effective_category == "preshow"
 
     @staticmethod
     def _duration_seconds(start: time, end: time) -> int:

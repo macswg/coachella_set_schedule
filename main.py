@@ -42,7 +42,7 @@ def _select_store():
 
 
 store = _select_store()
-from app.models import Act
+from app.models import ACT_CATEGORIES, Act
 from app.slip import calculate_slip, format_variance
 from app.websocket import manager
 
@@ -535,6 +535,7 @@ async def admin_show_detail(show_id: int, request: Request, _=Depends(_require_e
         "app_version": APP_VERSION,
         "data_backend": settings.DATA_BACKEND,
         "show": show,
+        "act_categories": ACT_CATEGORIES,
     }
     return templates.TemplateResponse(request, "admin/show_detail.html", context)
 
@@ -554,6 +555,7 @@ async def admin_add_act(show_id: int, request: Request, _=Depends(_require_edit_
         act_name=act_name,
         scheduled_start=_parse_time_field(form.get("scheduled_start", "")),
         scheduled_end=_parse_time_field(form.get("scheduled_end", "")),
+        category=form.get("category") or None,
     )
     await broadcast_schedule_update()
     from fastapi.responses import RedirectResponse
@@ -571,6 +573,7 @@ async def admin_update_act(act_id: int, request: Request, _=Depends(_require_edi
         scheduled_start=_parse_time_field(form.get("scheduled_start", "")),
         scheduled_end=_parse_time_field(end_raw) if end_raw else None,
         clear_end=(end_raw == ""),
+        category=form.get("category") or None,
     )
     await broadcast_schedule_update()
     from fastapi.responses import RedirectResponse

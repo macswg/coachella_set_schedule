@@ -32,6 +32,11 @@
                     </form>
                 </div>
                 <form method="post" action="/admin/acts/{{ act.id }}/update" class="admin-act-form">
+                    <select name="category" class="admin-category">
+                        {% for cat in act_categories %}
+                        <option value="{{ cat }}" {% if act.category == cat %}selected{% endif %}>{{ cat }}</option>
+                        {% endfor %}
+                    </select>
                     <input type="text" name="act_name" value="{{ act.act_name }}" required>
                     <input type="time" name="scheduled_start" value="{{ act.scheduled_start.strftime('%H:%M') if act.scheduled_start else '' }}">
                     <input type="time" name="scheduled_end" value="{{ act.scheduled_end.strftime('%H:%M') if act.scheduled_end else '' }}">
@@ -53,6 +58,13 @@
     <section class="admin-section">
         <h2>Add act</h2>
         <form method="post" action="/admin/shows/{{ show.id }}/acts" class="admin-form">
+            <label>Category
+                <select name="category">
+                    {% for cat in act_categories %}
+                    <option value="{{ cat }}" {% if cat == "set" %}selected{% endif %}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </label>
             <label>Name <input type="text" name="act_name" required></label>
             <label>Start <input type="time" name="scheduled_start"></label>
             <label>End <input type="time" name="scheduled_end"></label>
