@@ -341,3 +341,173 @@ def reset_screentime_sessions() -> None:
     """Test helper — clear in-memory screentime session tracking."""
     global _screentime_sessions
     _screentime_sessions = {}
+
+
+# ----------------------------------------------------------------------------
+# Admin CRUD (used by Phase 4 /admin UI)
+# ----------------------------------------------------------------------------
+
+def list_shows() -> list[dict]:
+    """Return all shows (including archived) with metadata for the admin UI."""
+    with _session() as session:
+        stmt = select(Show).order_by(Show.position.asc(), Show.id.asc())
+        out: list[dict] = []
+        for show in session.scalars(stmt):
+            out.append({
+                "id": show.id,
+                "name": show.name,
+                "position": show.position,
+                "is_current": show.is_current,
+                "is_previous": show.is_previous,
+                "is_archived": show.is_archived,
+                "act_count": len(show.acts),
+            })
+        return out
+
+
+def get_show_detail(show_id: int) -> Optional[dict]:
+    with _session() as session:
+        show = session.get(Show, show_id)
+        if show is None:
+            return None
+        return {
+            "id": show.id,
+            "name": show.name,
+            "is_current": show.is_current,
+            "is_previous": show.is_previous,
+            "is_archived": show.is_archived,
+            "acts": [
+                {
+                    "id": a.id,
+                    "row_index": a.row_index,
+                    "act_name": a.act_name,
+                    "scheduled_start": a.scheduled_start,
+                    "scheduled_end": a.scheduled_end,
+                }
+                for a in show.acts
+            ],
+        }
+
+
+def rename_show(show_id: int, new_name: str) -> None:
+    with _session() as session:
+        show = session.get(Show, show_id)
+        if show is None:
+            raise ValueError(f"Show id={show_id} not found")
+        show.name = new_name
+        session.commit()
+
+
+def delete_show(show_id: int) -> None:
+    with _session() as session:
+        show = session.get(Show, show_id)
+        if show is None:
+            return
+        session.delete(show)
+        session.commit()
+
+
+def set_current_show(show_id: int) -> None:
+    with _session() as session:
+        target = session.get(Show, show_id)
+        if target is None:
+            raise ValueError(f"Show id={show_id} not found")
+        for other in session.scalars(select(Show).where(Show.is_current.is_(True))):
+            other.is_current = False
+            other.is_previous = True
+        target.is_current = True
+        target.is_previous = False
+        target.is_archived = False
+        session.commit()
+
+
+def update_act(
+    act_id: int,
+    *,
+    act_name: Optional[str] = None,
+    scheduled_start: Optional[time] = None,
+    scheduled_end: Optional[time] = None,
+    clear_end: bool = False,
+) -> None:
+    with _session() as session:
+        row = session.get(ActRow, act_id)
+        if row is None:
+            raise ValueError(f"Act id={act_id} not found")
+        if act_name is not None:
+            row.act_name = act_name
+        if scheduled_start is not None:
+            row.scheduled_start = scheduled_start
+        if clear_end:
+            row.scheduled_end = None
+        elif scheduled_end is not None:
+            row.scheduled_end = scheduled_end
+        session.commit()
+
+
+def delete_act(act_id: int) -> None:
+    with _session() as session:
+        row = session.get(ActRow, act_id)
+        if row is None:
+            return
+        session.delete(row)
+        session.commit()
+
+
+def move_act(act_id: int, direction: str) -> None:
+    """Swap row_index with the adjacent act in the same show. direction = 'up' | 'down'."""
+    if direction not in ("up", "down"):
+        raise ValueError("direction must be 'up' or 'down'")
+    with _session() as session:
+        row = session.get(ActRow, act_id)
+        if row is None:
+            raise ValueError(f"Act id={act_id} not found")
+
+        siblings = sorted(row.show.acts, key=lambda a: a.row_index)
+        idx = next(i for i, a in enumerate(siblings) if a.id == row.id)
+        neighbor_idx = idx - 1 if direction == "up" else idx + 1
+        if neighbor_idx < 0 or neighbor_idx >= len(siblings):
+            return
+        neighbor = siblings[neighbor_idx]
+        original = row.row_index
+        target = neighbor.row_index
+        # Three-step swap to satisfy UNIQUE(show_id, row_index): park row at
+        # a sentinel, move neighbor, then place row at the vacated slot.
+        row.row_index = -1
+        session.flush()
+        neighbor.row_index = original
+        session.flush()
+        row.row_index = target
+        session.commit()
+
+
+def import_show_from_json(payload: dict) -> int:
+    """Import a show from a JSON payload. Returns the new show id.
+
+    Expected shape:
+        {"name": "W1Shw1", "make_current": true,
+         "acts": [{"act_name": "...", "scheduled_start": "HH:MM", "scheduled_end": "HH:MM"}, ...]}
+    """
+    name = payload.get("name")
+    if not name:
+        raise ValueError("Import payload missing 'name'")
+    make_current = bool(payload.get("make_current", False))
+    show = create_show(name, make_current=make_current)
+
+    def _parse(value: Optional[str]) -> Optional[time]:
+        if not value:
+            return None
+        for fmt in ("%H:%M", "%H:%M:%S", "%I:%M %p", "%I:%M:%S %p"):
+            try:
+                return datetime.strptime(value, fmt).time()
+            except ValueError:
+                continue
+        raise ValueError(f"Unparseable time: {value!r}")
+
+    for entry in payload.get("acts", []):
+        add_act(
+            show.name,
+            act_name=entry["act_name"],
+            scheduled_start=_parse(entry.get("scheduled_start")),
+            scheduled_end=_parse(entry.get("scheduled_end")),
+        )
+    return show.id

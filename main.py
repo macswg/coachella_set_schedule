@@ -447,6 +447,180 @@ async def recording_dismiss(act_name: str):
     return {"status": "ok"}
 
 
+# ---------------------------------------------------------------------------
+# Admin UI — SQLite-only schedule editor (gated by EDIT_PASSWORD)
+# ---------------------------------------------------------------------------
+
+def _parse_time_field(value: str):
+    if not value:
+        return None
+    from datetime import datetime as _dt
+    for fmt in ("%H:%M", "%H:%M:%S"):
+        try:
+            return _dt.strptime(value, fmt).time()
+        except ValueError:
+            continue
+    raise HTTPException(status_code=400, detail=f"Invalid time: {value!r}")
+
+
+def _require_sqlite():
+    if settings.DATA_BACKEND != "sqlite":
+        raise HTTPException(status_code=400, detail="Admin UI requires DATA_BACKEND=sqlite")
+
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_shows(request: Request, _=Depends(_require_edit_auth)):
+    context = {
+        "request": request,
+        "app_version": APP_VERSION,
+        "data_backend": settings.DATA_BACKEND,
+        "shows": store.list_shows() if settings.DATA_BACKEND == "sqlite" else [],
+    }
+    return templates.TemplateResponse(request, "admin/shows.html", context)
+
+
+@app.post("/admin/shows")
+async def admin_create_show(request: Request, _=Depends(_require_edit_auth)):
+    _require_sqlite()
+    form = await request.form()
+    name = (form.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="name required")
+    make_current = bool(form.get("make_current"))
+    try:
+        store.create_show(name, make_current=make_current)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse("/admin", status_code=303)
+
+
+@app.post("/admin/shows/{show_id}/delete")
+async def admin_delete_show(show_id: int, _=Depends(_require_edit_auth)):
+    _require_sqlite()
+    store.delete_show(show_id)
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse("/admin", status_code=303)
+
+
+@app.post("/admin/shows/{show_id}/current")
+async def admin_set_current_show(show_id: int, _=Depends(_require_edit_auth)):
+    _require_sqlite()
+    store.set_current_show(show_id)
+    await broadcast_schedule_update()
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse("/admin", status_code=303)
+
+
+@app.post("/admin/shows/{show_id}/rename")
+async def admin_rename_show(show_id: int, request: Request, _=Depends(_require_edit_auth)):
+    _require_sqlite()
+    form = await request.form()
+    name = (form.get("name") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="name required")
+    store.rename_show(show_id, name)
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(f"/admin/shows/{show_id}", status_code=303)
+
+
+@app.get("/admin/shows/{show_id}", response_class=HTMLResponse)
+async def admin_show_detail(show_id: int, request: Request, _=Depends(_require_edit_auth)):
+    _require_sqlite()
+    show = store.get_show_detail(show_id)
+    if show is None:
+        raise HTTPException(status_code=404, detail="Show not found")
+    context = {
+        "request": request,
+        "app_version": APP_VERSION,
+        "data_backend": settings.DATA_BACKEND,
+        "show": show,
+    }
+    return templates.TemplateResponse(request, "admin/show_detail.html", context)
+
+
+@app.post("/admin/shows/{show_id}/acts")
+async def admin_add_act(show_id: int, request: Request, _=Depends(_require_edit_auth)):
+    _require_sqlite()
+    show = store.get_show_detail(show_id)
+    if show is None:
+        raise HTTPException(status_code=404, detail="Show not found")
+    form = await request.form()
+    act_name = (form.get("act_name") or "").strip()
+    if not act_name:
+        raise HTTPException(status_code=400, detail="act_name required")
+    store.add_act(
+        show["name"],
+        act_name=act_name,
+        scheduled_start=_parse_time_field(form.get("scheduled_start", "")),
+        scheduled_end=_parse_time_field(form.get("scheduled_end", "")),
+    )
+    await broadcast_schedule_update()
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(f"/admin/shows/{show_id}", status_code=303)
+
+
+@app.post("/admin/acts/{act_id}/update")
+async def admin_update_act(act_id: int, request: Request, _=Depends(_require_edit_auth)):
+    _require_sqlite()
+    form = await request.form()
+    end_raw = form.get("scheduled_end", "")
+    store.update_act(
+        act_id,
+        act_name=(form.get("act_name") or "").strip() or None,
+        scheduled_start=_parse_time_field(form.get("scheduled_start", "")),
+        scheduled_end=_parse_time_field(end_raw) if end_raw else None,
+        clear_end=(end_raw == ""),
+    )
+    await broadcast_schedule_update()
+    from fastapi.responses import RedirectResponse
+    referer = request.headers.get("referer", "/admin")
+    return RedirectResponse(referer, status_code=303)
+
+
+@app.post("/admin/acts/{act_id}/delete")
+async def admin_delete_act(act_id: int, request: Request, _=Depends(_require_edit_auth)):
+    _require_sqlite()
+    store.delete_act(act_id)
+    await broadcast_schedule_update()
+    from fastapi.responses import RedirectResponse
+    referer = request.headers.get("referer", "/admin")
+    return RedirectResponse(referer, status_code=303)
+
+
+@app.post("/admin/acts/{act_id}/move")
+async def admin_move_act(act_id: int, request: Request, _=Depends(_require_edit_auth)):
+    _require_sqlite()
+    form = await request.form()
+    direction = form.get("direction", "up")
+    store.move_act(act_id, direction)
+    await broadcast_schedule_update()
+    from fastapi.responses import RedirectResponse
+    referer = request.headers.get("referer", "/admin")
+    return RedirectResponse(referer, status_code=303)
+
+
+@app.post("/admin/import/json")
+async def admin_import_json(request: Request, _=Depends(_require_edit_auth)):
+    _require_sqlite()
+    form = await request.form()
+    upload = form.get("file")
+    if not hasattr(upload, "read"):
+        raise HTTPException(status_code=400, detail="file upload required")
+    import json
+    try:
+        payload = json.loads((await upload.read()).decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as e:
+        raise HTTPException(status_code=400, detail=f"Invalid JSON: {e}")
+    try:
+        show_id = store.import_show_from_json(payload)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    await broadcast_schedule_update()
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(f"/admin/shows/{show_id}", status_code=303)
+
+
 @app.post("/api/reset")
 async def reset_data():
     """Reset all actual times to None (testing only, disabled when DATA_BACKEND=sheets)."""

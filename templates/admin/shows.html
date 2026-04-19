@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Admin — Shows{% endblock %}
+{% block content %}
+<main class="admin">
+    <header class="admin-header">
+        <h1>Schedule Admin</h1>
+        <nav><a href="/edit">&larr; Back to operator view</a></nav>
+    </header>
+
+    {% if data_backend != "sqlite" %}
+    <section class="admin-warning">
+        <p>The admin UI is only available when <code>DATA_BACKEND=sqlite</code>.</p>
+        <p>Current backend: <strong>{{ data_backend }}</strong></p>
+    </section>
+    {% else %}
+
+    <section class="admin-section">
+        <h2>Shows</h2>
+        {% if shows %}
+        <table class="admin-table">
+            <thead>
+                <tr><th>Name</th><th>Acts</th><th>Status</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+                {% for show in shows %}
+                <tr>
+                    <td><a href="/admin/shows/{{ show.id }}">{{ show.name }}</a></td>
+                    <td>{{ show.act_count }}</td>
+                    <td>
+                        {% if show.is_current %}<span class="badge badge-current">current</span>{% endif %}
+                        {% if show.is_previous %}<span class="badge badge-previous">previous</span>{% endif %}
+                        {% if show.is_archived %}<span class="badge badge-archived">archived</span>{% endif %}
+                    </td>
+                    <td class="admin-actions">
+                        {% if not show.is_current %}
+                        <form method="post" action="/admin/shows/{{ show.id }}/current" style="display:inline">
+                            <button type="submit">Set current</button>
+                        </form>
+                        {% endif %}
+                        <form method="post" action="/admin/shows/{{ show.id }}/delete"
+                              onsubmit="return confirm('Delete show {{ show.name|e }}? This removes all acts.');"
+                              style="display:inline">
+                            <button type="submit" class="btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="admin-empty">No shows yet. Create one below.</p>
+        {% endif %}
+    </section>
+
+    <section class="admin-section">
+        <h2>New show</h2>
+        <form method="post" action="/admin/shows" class="admin-form">
+            <label>Name <input type="text" name="name" required placeholder="W1Shw1"></label>
+            <label><input type="checkbox" name="make_current" value="1"> Set as current</label>
+            <button type="submit">Create</button>
+        </form>
+    </section>
+
+    <section class="admin-section">
+        <h2>Import from JSON</h2>
+        <form method="post" action="/admin/import/json" enctype="multipart/form-data" class="admin-form">
+            <label>JSON file <input type="file" name="file" accept="application/json,.json" required></label>
+            <button type="submit">Import</button>
+        </form>
+        <details>
+            <summary>Expected format</summary>
+<pre>{
+  "name": "W1Shw1",
+  "make_current": true,
+  "acts": [
+    {"act_name": "Load In", "scheduled_start": "10:00"},
+    {"act_name": "Sunrise Collective", "scheduled_start": "11:30", "scheduled_end": "12:00"}
+  ]
+}</pre>
+        </details>
+    </section>
+
+    {% endif %}
+</main>
+{% endblock %}

@@ -152,3 +152,67 @@ def test_advance_show(store):
 def test_advance_show_without_next_raises(store):
     with pytest.raises(ValueError):
         store.advance_show()
+
+
+# --- admin helpers (Phase 4) ---
+
+def test_list_shows_reports_act_counts(store):
+    shows = store.list_shows()
+    w1 = next(s for s in shows if s["name"] == "W1Shw1")
+    assert w1["is_current"] is True
+    assert w1["act_count"] == 6
+
+
+def test_set_current_show_swaps_flags(store):
+    store.create_show("W1Shw2", make_current=False)
+    w2 = next(s for s in store.list_shows() if s["name"] == "W1Shw2")
+    store.set_current_show(w2["id"])
+    shows = {s["name"]: s for s in store.list_shows()}
+    assert shows["W1Shw2"]["is_current"] is True
+    assert shows["W1Shw1"]["is_current"] is False
+    assert shows["W1Shw1"]["is_previous"] is True
+
+
+def test_update_act_changes_fields(store):
+    detail = store.get_show_detail(1)
+    first_act_id = detail["acts"][0]["id"]
+    store.update_act(first_act_id, act_name="Renamed", scheduled_start=time(9, 0))
+    detail = store.get_show_detail(1)
+    row = next(a for a in detail["acts"] if a["id"] == first_act_id)
+    assert row["act_name"] == "Renamed"
+    assert row["scheduled_start"] == time(9, 0)
+
+
+def test_move_act_swaps_with_neighbor(store):
+    detail = store.get_show_detail(1)
+    ordered_before = [a["act_name"] for a in detail["acts"]]
+    second_id = detail["acts"][1]["id"]
+    store.move_act(second_id, "up")
+    detail = store.get_show_detail(1)
+    ordered_after = [a["act_name"] for a in detail["acts"]]
+    assert ordered_after[0] == ordered_before[1]
+    assert ordered_after[1] == ordered_before[0]
+
+
+def test_delete_act_removes_row(store):
+    detail = store.get_show_detail(1)
+    victim_id = detail["acts"][0]["id"]
+    store.delete_act(victim_id)
+    detail = store.get_show_detail(1)
+    assert all(a["id"] != victim_id for a in detail["acts"])
+
+
+def test_import_show_from_json(store):
+    payload = {
+        "name": "Imported",
+        "make_current": False,
+        "acts": [
+            {"act_name": "Act A", "scheduled_start": "10:00"},
+            {"act_name": "Act B", "scheduled_start": "11:00", "scheduled_end": "11:30"},
+        ],
+    }
+    show_id = store.import_show_from_json(payload)
+    detail = store.get_show_detail(show_id)
+    assert detail["name"] == "Imported"
+    assert [a["act_name"] for a in detail["acts"]] == ["Act A", "Act B"]
+    assert detail["acts"][1]["scheduled_end"] == time(11, 30)

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Admin — {{ show.name }}{% endblock %}
+{% block content %}
+<main class="admin">
+    <header class="admin-header">
+        <h1>{{ show.name }}</h1>
+        <nav><a href="/admin">&larr; All shows</a></nav>
+    </header>
+
+    <section class="admin-section">
+        <h2>Rename</h2>
+        <form method="post" action="/admin/shows/{{ show.id }}/rename" class="admin-form">
+            <input type="text" name="name" value="{{ show.name }}" required>
+            <button type="submit">Rename</button>
+        </form>
+    </section>
+
+    <section class="admin-section">
+        <h2>Acts</h2>
+        {% if show.acts %}
+        <ul class="admin-acts">
+            {% for act in show.acts %}
+            <li class="admin-act">
+                <div class="admin-act-order">
+                    <form method="post" action="/admin/acts/{{ act.id }}/move">
+                        <input type="hidden" name="direction" value="up">
+                        <button type="submit" aria-label="Move up">&uarr;</button>
+                    </form>
+                    <form method="post" action="/admin/acts/{{ act.id }}/move">
+                        <input type="hidden" name="direction" value="down">
+                        <button type="submit" aria-label="Move down">&darr;</button>
+                    </form>
+                </div>
+                <form method="post" action="/admin/acts/{{ act.id }}/update" class="admin-act-form">
+                    <input type="text" name="act_name" value="{{ act.act_name }}" required>
+                    <input type="time" name="scheduled_start" value="{{ act.scheduled_start.strftime('%H:%M') if act.scheduled_start else '' }}">
+                    <input type="time" name="scheduled_end" value="{{ act.scheduled_end.strftime('%H:%M') if act.scheduled_end else '' }}">
+                    <button type="submit">Save</button>
+                </form>
+                <form method="post" action="/admin/acts/{{ act.id }}/delete"
+                      onsubmit="return confirm('Delete act {{ act.act_name|e }}?');"
+                      class="admin-act-delete">
+                    <button type="submit" class="btn-danger">Delete</button>
+                </form>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="admin-empty">No acts yet.</p>
+        {% endif %}
+    </section>
+
+    <section class="admin-section">
+        <h2>Add act</h2>
+        <form method="post" action="/admin/shows/{{ show.id }}/acts" class="admin-form">
+            <label>Name <input type="text" name="act_name" required></label>
+            <label>Start <input type="time" name="scheduled_start"></label>
+            <label>End <input type="time" name="scheduled_end"></label>
+            <button type="submit">Add</button>
+        </form>
+    </section>
+</main>
+{% endblock %}
