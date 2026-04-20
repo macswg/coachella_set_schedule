@@ -22,6 +22,17 @@ Live index for the internal-DB feature. See `PRD.md#internal-database-backend` f
 
 - **Explicit `category` field on `Act`** — added during Phase 4. Columns: `set`, `loadin`, `ondeck`, `changeover`, `preshow`, `end`. Replaces fragile name-based detection in `app/models.py` with a DB-backed authoritative value; name inference kept as fallback so the Google Sheets backend keeps working. Migration `0002_act_category` backfills existing rows.
 
+## Post-epic polish (landed after all 7 phases merged)
+
+| Commit | Change |
+|--------|--------|
+| `893f15e` | Unified app nav (`templates/components/app_nav.html`) shared across `/edit`, `/admin`, `/history`; actual start/end + screentime surfaced on admin show detail; `/history/{id}` drill-down page |
+| `3d6b63d` | Active show name rendered in header on `/`, `/edit`, `/preview`, `/stage` |
+| `28db5a5` | Export buttons added to `/history` list and `/history/{id}` detail pages |
+| `a9e53c6` | Admin-managed QR code URL and visibility — `qr_url`/`qr_enabled` in `app_settings` table (migration `0003_app_settings`); editable at `/admin` settings panel without server restart |
+| `0710059` | Brightness display hidden in UI when `ARTNET_ENABLED=false` |
+| `42ff38e` | `EDIT_PASSWORD` extended to gate `/api/reset`, `/api/reload`, `/api/show/advance`, `/api/recording/toggle` (four high-risk action endpoints) |
+
 ## Cross-cutting invariants
 
 - Pydantic `Act` in `app/models.py` remains the boundary type between store and app — do not leak SQLAlchemy rows upward.
@@ -37,4 +48,4 @@ Live index for the internal-DB feature. See `PRD.md#internal-database-backend` f
 3. ✅ `/edit` — operate show (mark start/stop/screentime).
 4. ✅ Restart container — state persists; `/edit` renders mid-run state.
 5. ✅ Switch to `DATA_BACKEND=sheets`, restart — Sheets path still works.
-6. ✅ `python -m pytest` passes: 212/212.
+6. ✅ `python -m pytest` passes: 229/229.

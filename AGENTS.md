@@ -8,9 +8,23 @@
 - `secret/`: reserved for local-only materials (keep empty in git; do not commit credentials).
 
 Code layout:
-- `main.py`: FastAPI app entry point, background Google Sheets polling.
-- `app/`: server-side modules (config, models, slip logic, sheets integration, WebSocket manager, Art-Net listener).
-- `templates/`: Jinja2 templates — `base.html` (shared head with CDN scripts + `schedule_utils.js`), `index.html` (main schedule view + Alpine.js app), `stage.html` (large-format stage display), `components/act_row.html` (per-act partial).
+- `main.py`: FastAPI app entry point, routes, background polling, WebSocket hub.
+- `app/`: server-side modules:
+  - `config.py`, `models.py`, `slip.py`, `websocket.py` — core logic (backend-agnostic)
+  - `store.py` — in-memory mock backend (`DATA_BACKEND=memory`)
+  - `sheets.py` — Google Sheets backend (`DATA_BACKEND=sheets`)
+  - `sqlite_store.py` — SQLite backend (`DATA_BACKEND=sqlite`); same interface as `store.py`/`sheets.py`
+  - `db/engine.py`, `db/models.py` — SQLAlchemy engine + ORM models (Show, Act, RecordingEvent, AppSetting); `init_db()` runs Alembic migrations on startup
+  - `artnet.py`, `recorder.py`, `triggers.py`, `ntfy.py`, `notifier.py`, `companion.py` — optional integrations
+- `alembic/` + `alembic.ini`: database migration tooling (versions: `0001_initial`, `0002_act_category`, `0003_app_settings`).
+- `templates/`: Jinja2 templates:
+  - `base.html` (shared head with CDN scripts + `schedule_utils.js`; renders show name label in header)
+  - `index.html` (main schedule view + Alpine.js app)
+  - `stage.html` (large-format stage display)
+  - `history.html` / `history_detail.html` (slip/variance summary + per-act drill-down)
+  - `admin/shows.html` / `admin/show_detail.html` (schedule editor, SQLite only)
+  - `components/act_row.html` (per-act partial)
+  - `components/app_nav.html` (unified top nav rendered on `/edit`, `/admin`, `/history`)
 - `static/styles.css`: dark theme styles.
 - `static/schedule_utils.js`: shared client-side helpers (`timeToSeconds`, `normalizeActTimes`, `formatCountdown`) loaded by `base.html` and used by both `index.html` and `stage.html`.
 

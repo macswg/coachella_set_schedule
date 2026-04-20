@@ -83,7 +83,7 @@ This project provides a “schedule board” for a festival day that tracks each
 | Server | Python + FastAPI (single process serves everything) |
 | Templates | Jinja2 (server-rendered HTML) |
 | Interactivity | HTMX (server interactions, WebSocket) + Alpine.js (client-side reactivity) |
-| Data source | Google Sheets API (Service Account auth) |
+| Data source | Pluggable via `DATA_BACKEND`: Google Sheets API (Service Account) _or_ SQLite (Alembic + SQLAlchemy) _or_ in-memory mock |
 | Local storage | Browser localStorage for offline viewing |
 | Hosting | Local machine (LAN access only) |
 
@@ -136,7 +136,7 @@ No Node.js or build step required. Run with single command: `uvicorn main:app`
 ### Access Model
 - Multiple operators can view and record simultaneously
 - All operators see the same shared state via WebSocket sync
-- No authentication required (single shared session per stage)
+- **Optional HTTP Basic Auth** — set `EDIT_PASSWORD` in `.env` to password-protect `/edit`, `/admin*`, `/history*`, and high-risk action endpoints. Leave unset for open LAN access. The view-only page (`/`) and stage display (`/stage`) are always public.
 
 ## Resolved Questions
 | Question | Resolution |
@@ -147,7 +147,7 @@ No Node.js or build step required. Run with single command: `uvicorn main:app`
 | Artist photos | Skip for MVP |
 | Multi-stage support | Single stage only |
 | Timezone handling | Festival local time only (PDT) |
-| Data sync | Google Sheets API (live sync) |
+| Data sync | Pluggable backend: Google Sheets API _or_ SQLite _or_ memory |
 
 ## Internal Database Backend
 
@@ -167,14 +167,24 @@ Google Sheets is powerful for remote schedule editing but introduces a hard depe
 
 ### Phasing
 
-Implementation is tracked in `PLAN.md` with one GH sub-issue per phase:
-1. Foundation & schema
-2. SQLite store backend (parity with `app/sheets.py`)
-3. Backend selector + config (`DATA_BACKEND`)
-4. Schedule editor UI (`/admin`)
-5. Multi-show retention (current + previous live; rest archived)
-6. Export (JSON + CSV per show)
-7. Analytics (`/history` — stretch)
+Implementation is tracked in `PLAN.md` with one GH sub-issue per phase. All phases are complete on `internal_database` branch.
+
+1. ✅ Foundation & schema (`app/db/`, Alembic migrations, SQLAlchemy models)
+2. ✅ SQLite store backend (`app/sqlite_store.py` — parity with `app/sheets.py`)
+3. ✅ Backend selector + config (`DATA_BACKEND` env var; `USE_GOOGLE_SHEETS` kept as deprecated shim)
+4. ✅ Schedule editor UI (`/admin` — create/edit/archive shows; explicit `Act.category` field; migration `0002_act_category`)
+5. ✅ Multi-show retention (archive + purge + restore; `ARCHIVE_RETENTION_COUNT`)
+6. ✅ Export (JSON + CSV per show via `/admin/shows/{id}/export.*`)
+7. ✅ Analytics (`/history` — slip/variance summary + per-act drill-down at `/history/{id}`)
+
+### Scope adds delivered after original plan
+
+- **Explicit `Act.category` field** — DB-backed authoritative row type (`set` | `loadin` | `ondeck` | `changeover` | `preshow` | `end`). Name-inference kept as fallback for Sheets/memory backends.
+- **Admin-managed runtime settings** — `qr_url` and `qr_enabled` stored in the `app_settings` table (migration `0003_app_settings`). Editable at runtime via the `/admin` settings panel without restarting the server. `PUBLIC_URL` env var is used as the first-run seed value.
+- **Unified app nav** — `templates/components/app_nav.html` shared across `/edit`, `/admin`, `/history`.
+- **Show name in header** — active show name displayed on all pages (`/`, `/edit`, `/stage`, `/admin`) via `current_show` template context.
+- **Art-Net brightness gating** — brightness UI element hidden when `ARTNET_ENABLED=false`.
+- **Extended auth scope** — `EDIT_PASSWORD` now gates `/admin*`, `/history*`, and four high-risk action endpoints (`/api/reset`, `/api/reload`, `/api/show/advance`, `/api/recording/toggle`) in addition to `/edit`.
 
 ## Google Sheet Schema
 

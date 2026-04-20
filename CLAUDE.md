@@ -28,8 +28,8 @@ No build step required - HTMX and Alpine.js loaded via CDN script tags.
 2. HTMX WebSocket (`hx-ws`) keeps all operators in sync
 3. "Record Now" button sends time via HTMX, FastAPI broadcasts to all clients
 4. Alpine.js handles live clock, computed slip values, per-act countdowns, and act alerts client-side
-5. Actual times written to Google Sheets for persistence
-6. Background task polls Google Sheets every 30 seconds and broadcasts updates to all clients
+5. Actual times written to the active backend (Google Sheets or SQLite) for persistence
+6. Background task polls the active backend every 30 seconds and broadcasts updates to all clients
 
 ### Google Sheet Schema
 
@@ -72,6 +72,8 @@ python -m pytest -k "midnight"            # by keyword
 # Operator:     http://localhost:8000/edit
 # Preview:      http://localhost:8000/preview  (operator + time-of-day override, +24h toggle for post-midnight)
 # Stage board:  http://localhost:8000/stage    (large-format clock + up-next display)
+# Schedule editor: http://localhost:8000/admin (SQLite only; gated by EDIT_PASSWORD)
+# History:      http://localhost:8000/history  (slip/variance; gated by EDIT_PASSWORD)
 # LAN: http://<your-ip>:8000
 
 # Force all connected browser tabs to hard-reload (useful after a container rebuild)
@@ -85,26 +87,43 @@ coachella_set_schedule/
 ├── main.py              # FastAPI app entry point, background polling
 ├── requirements.txt     # Python dependencies
 ├── .env.example         # Environment variables template
-├── VERSION              # App version string (e.g. 1.0.9), read at startup
+├── VERSION              # App version string (e.g. 1.3.0), read at startup
+├── alembic.ini          # Alembic migration config
+├── alembic/
+│   ├── env.py           # Alembic environment (connects to SQLite)
+│   └── versions/
+│       ├── 0001_initial.py         # Initial schema (Show, Act, RecordingEvent)
+│       ├── 0002_act_category.py    # Act.category column
+│       └── 0003_app_settings.py    # AppSetting key/value table
 ├── app/
-│   ├── config.py        # Settings from environment (includes APP_VERSION, WEATHER_URL)
-│   ├── models.py        # Pydantic models (Act, Schedule)
+│   ├── config.py        # Settings from environment (includes APP_VERSION, WEATHER_URL, ARCHIVE_RETENTION_COUNT)
+│   ├── models.py        # Pydantic models (Act, Schedule) — boundary type; effective_category is the canonical accessor
 │   ├── slip.py          # Slip calculation logic
-│   ├── store.py         # In-memory mock data (development)
-│   ├── sheets.py        # Google Sheets integration (column-based parsing)
+│   ├── store.py         # In-memory mock data (memory backend)
+│   ├── sheets.py        # Google Sheets integration (column-based parsing; sheets backend)
+│   ├── sqlite_store.py  # SQLite backend (same interface as store.py/sheets.py)
+│   ├── db/
+│   │   ├── engine.py    # SQLAlchemy engine + init_db() (runs Alembic upgrade head on startup)
+│   │   └── models.py    # SQLAlchemy ORM models (Show, Act, RecordingEvent, AppSetting)
 │   ├── websocket.py     # WebSocket connection manager
-│   ├── artnet.py        # Art-Net brightness listener (optional)
+│   ├── artnet.py        # Art-Net brightness listener (optional; brightness display hidden when ARTNET_ENABLED=false)
 │   ├── recorder.py      # AJA Ki Pro HTTP commands (record/stop/status)
 │   ├── triggers.py      # Schedule-based recording trigger engine
 │   ├── ntfy.py          # ntfy.sh push notification sender
 │   ├── notifier.py      # Schedule-based and action-based ntfy notifications
 │   └── companion.py     # Bitfocus Companion HTTP button-press integration
 ├── templates/
-│   ├── base.html        # Base template with HTMX/Alpine.js; renders version footer
+│   ├── base.html        # Base template with HTMX/Alpine.js; renders version footer and show name label
 │   ├── index.html       # Main schedule view
 │   ├── stage.html       # Large-format stage display (/stage)
+│   ├── history.html     # Show history list — slip/variance summary (/history)
+│   ├── history_detail.html # Per-show per-act drill-down (/history/{id})
+│   ├── admin/
+│   │   ├── shows.html       # /admin — show list, archive controls, QR settings editor
+│   │   └── show_detail.html # /admin/shows/{id} — act CRUD, actual-times visibility, export buttons
 │   └── components/
-│       └── act_row.html # Single act row partial
+│       ├── act_row.html     # Single act row partial
+│       └── app_nav.html     # Unified top nav (rendered when show_nav=True: /edit, /admin, /history)
 ├── static/
 │   ├── styles.css           # Dark theme styles
 │   └── schedule_utils.js    # Shared JS helpers: timeToSeconds, normalizeActTimes, formatCountdown
@@ -113,6 +132,9 @@ coachella_set_schedule/
     ├── test_slip.py          # Slip calculation unit tests
     ├── test_midnight.py      # Midnight rollover tests
     ├── test_triggers.py      # Recording trigger engine tests (normalization, midnight, skips)
+    ├── test_sqlite_store.py  # SQLite store CRUD and show lifecycle
+    ├── test_slip_summary.py  # Slip/variance summary computed values
+    ├── test_api_auth.py      # EDIT_PASSWORD enforcement on gated routes
     └── ...                   # API, store, and sheets tests
 ```
 
@@ -152,7 +174,9 @@ The SQLite file lives on the **host** at `./data/schedule.db`, bind-mounted into
 
 `.db-journal` files next to the DB (SQLite WAL/journal) are transient and safe to ignore; `.gitignore` already excludes `data/*.db*`.
 
-The app polls Google Sheets every 30 seconds (configurable via `POLL_INTERVAL_SECONDS` in `main.py`) and broadcasts updates to all connected clients.
+**Show name in header** — `main.py` injects `current_show` into all page template contexts. When `DATA_BACKEND=sqlite`, this is the name of the active show record; when `DATA_BACKEND=sheets`, it is the active sheet tab name. `base.html` renders it as a small label below the stage name. `/` and `/stage` display it; it is also visible on `/edit` and `/admin`.
+
+The app polls the active backend every 30 seconds (configurable via `POLL_INTERVAL_SECONDS` in `main.py`) and broadcasts updates to all connected clients.
 
 **Multi-show tabs:** Set `SHOW_TABS` to a comma-separated list of sheet tab names (e.g. `W1Shw1,W1Shw2,W2Shw4`). The app starts on the tab named by `GOOGLE_SHEET_TAB`; if that tab is not in the list, it defaults to the first tab. Operators advance to the next show via the "Advance to Next Show" button on `/edit`, which reloads all clients.
 
@@ -167,7 +191,7 @@ The app polls Google Sheets every 30 seconds (configurable via `POLL_INTERVAL_SE
 - **Midnight rollover:** Acts past midnight (e.g. `01:00`) are stored as plain `time` objects; rollover is handled at comparison time. Server-side: `models.py` adds `timedelta(days=1)` when end < start. Client-side: `normalizeActTimes()` walks acts in sheet order and bumps any time that drops more than 1 hour below the previous act's time. Acts must be in chronological order in the sheet for this to work correctly. The trigger engine (`triggers.py`) applies the same normalization via `_normalize_act_start_secs()`. Both use a **5am reset threshold**: times before 5am on a midnight-crossing show are treated as same-show (next-day) time; after 5am the schedule resets to normal day context.
 - **END OF SHOW row:** A sheet row whose artist name is exactly `END` or `END OF SHOW` (case-insensitive) marks the end of the show. The `is_end_of_show` computed field on `Act` identifies these rows. They require no scheduled time — the parser infers one from the previous act's `scheduled_end`. If the END OF SHOW row has no scheduled time (e.g. last act has no `scheduled_end`), the banner switches to "END OF SHOW / Have a Great Night" only once the operator marks the last act complete. The loop stops at END OF SHOW and never processes acts below it in the sheet.
 - **Acts with no `scheduled_end`:** Allowed through the parser. Client-side null guards prevent NaN countdowns and false `act-missed` states. While the last act is live, a secondary "Show ends in X:XX" countdown appears in the now-playing card if an END OF SHOW row with a scheduled time follows it.
-- **Special row types** — computed fields on `Act` drive UI and trigger behavior:
+- **Special row types** — the `Act.category` field (`set` | `loadin` | `ondeck` | `changeover` | `preshow` | `end`) is the authoritative row-type marker when set (SQLite backend). The `effective_category` property falls back to name-based detection when `category` is `None` (Sheets and memory backends). The `is_*` computed properties read from `effective_category`. Always branch on `effective_category` or the `is_*` properties — never on `act.category` directly.
   - `is_loadin` — name contains `'load in'`: informational label, no buttons, auto-hidden 1 hour after scheduled start
   - `is_ondeck` — name contains `'on deck'` **or** `'stage time'`: shows screentime counter + START/STOP Screentime buttons; no set-start/stop buttons
   - `is_changeover` — name contains `'changeover'`: no recording trigger fired
@@ -245,7 +269,7 @@ Set `COMPANION_URL` in `.env` (e.g. `http://192.168.1.100:19267`) to enable Comp
 ## Access Control & Public URL
 
 - **Edit page auth** — Set `EDIT_PASSWORD` in `.env` to enable HTTP Basic Auth on `GET /edit`, all `/admin*` routes, `/history*`, and four high-risk action endpoints (`POST /api/reset`, `/api/reload`, `/api/show/advance`, `/api/recording/toggle`). The browser prompts once per session; only the password is checked (username ignored). Leave empty to disable (LAN-only use). Per-act endpoints (`/acts/{name}/*`) and deck control (`/api/kipro/*`) are intentionally left ungated so curl-based automation keeps working. Read-only polling endpoints (`/api/time`, `/api/weather`, `/api/brightness`, `/api/kipro/status`) are always public because the viewer pages depend on them.
-- **Public URL / QR code** — Set `PUBLIC_URL` in `.env` (e.g. `https://coachella.pickle.green`) to specify the Cloudflare tunnel address used in the viewer QR code. Falls back to `window.location.origin` if unset. The QR button appears in the schedule header on all pages and generates the code client-side via `qrcodejs`.
+- **Public URL / QR code** — Set `PUBLIC_URL` in `.env` (e.g. `https://coachella.pickle.green`) to specify the Cloudflare tunnel address used in the viewer QR code. Falls back to `window.location.origin` if unset. When `DATA_BACKEND=sqlite`, the QR URL and visibility can also be edited at runtime via the `/admin` settings panel (stored in the `app_settings` table as `qr_url` and `qr_enabled`); `.env` is used only as the first-run seed. The QR button appears in the schedule header on all pages and generates the code client-side via `qrcodejs`.
 - **Cloudflare CSS caching** — Cloudflare aggressively caches static assets. After a Docker rebuild that changes CSS or JS, purge the cache via Cloudflare dashboard → Caching → Configuration → Purge Everything. When debugging mobile-only style issues, always test via LAN IP first to rule out CDN caching before assuming a code bug.
 
 ## Startup Auto-Reload
