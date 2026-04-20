@@ -2055,3 +2055,14 @@ body {
 }
 .summary-stats strong { font-size: 1rem; font-weight: 500; }
 .var-cell { font-variant-numeric: tabular-nums; }
+
+.show-name-label {
+    font-size: 0.9rem;
+    color: var(--accent, #4ade80);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    margin-top: 0.15rem;
+}
+.stage-header .show-name-label {
+    font-size: 1.2rem;
+}

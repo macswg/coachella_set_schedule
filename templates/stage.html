@@ -9,6 +9,7 @@
     <header class="header stage-header">
         <div class="header-left">
             <h1>{{ stage_name }}</h1>
+            {% if current_show %}<div class="show-name-label">{{ current_show }}</div>{% endif %}
             <div class="server-status">
                 <span class="server-status-dot" :class="{ 'offline': !serverOnline }"></span>
                 <span class="server-status-label" :style="serverOnline ? 'color: #44ff44' : 'color: #ff4444'" x-text="serverOnline ? 'Live Data' : 'Offline Data - DO NOT REFRESH'"></span>
