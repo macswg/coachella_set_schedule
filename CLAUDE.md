@@ -244,7 +244,7 @@ Set `COMPANION_URL` in `.env` (e.g. `http://192.168.1.100:19267`) to enable Comp
 
 ## Access Control & Public URL
 
-- **Edit page auth** — Set `EDIT_PASSWORD` in `.env` to enable HTTP Basic Auth on `GET /edit`. The browser prompts once per session. Only the password is checked; the username field is ignored. Leave empty to disable (LAN-only use).
+- **Edit page auth** — Set `EDIT_PASSWORD` in `.env` to enable HTTP Basic Auth on `GET /edit`, all `/admin*` routes, `/history*`, and four high-risk action endpoints (`POST /api/reset`, `/api/reload`, `/api/show/advance`, `/api/recording/toggle`). The browser prompts once per session; only the password is checked (username ignored). Leave empty to disable (LAN-only use). Per-act endpoints (`/acts/{name}/*`) and deck control (`/api/kipro/*`) are intentionally left ungated so curl-based automation keeps working. Read-only polling endpoints (`/api/time`, `/api/weather`, `/api/brightness`, `/api/kipro/status`) are always public because the viewer pages depend on them.
 - **Public URL / QR code** — Set `PUBLIC_URL` in `.env` (e.g. `https://coachella.pickle.green`) to specify the Cloudflare tunnel address used in the viewer QR code. Falls back to `window.location.origin` if unset. The QR button appears in the schedule header on all pages and generates the code client-side via `qrcodejs`.
 - **Cloudflare CSS caching** — Cloudflare aggressively caches static assets. After a Docker rebuild that changes CSS or JS, purge the cache via Cloudflare dashboard → Caching → Configuration → Purge Everything. When debugging mobile-only style issues, always test via LAN IP first to rule out CDN caching before assuming a code bug.
 

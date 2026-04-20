@@ -375,7 +375,7 @@ async def websocket_endpoint(websocket: WebSocket, mode: str = "view"):
 
 
 @app.post("/api/show/advance")
-async def advance_show():
+async def advance_show(_=Depends(_require_edit_auth)):
     """Advance to the next show tab. Broadcasts a reload to all connected clients."""
     if settings.DATA_BACKEND == "memory":
         from fastapi import HTTPException
@@ -440,7 +440,7 @@ async def kipro_status():
 
 
 @app.post("/api/recording/toggle")
-async def recording_toggle():
+async def recording_toggle(_=Depends(_require_edit_auth)):
     """Toggle recording triggers on/off at runtime."""
     trigger_engine.set_enabled(not trigger_engine.is_enabled())
     await manager.broadcast_recording_state(trigger_engine.get_active_reminders(), trigger_engine.is_enabled())
@@ -819,7 +819,7 @@ async def history_detail(show_id: int, request: Request, _=Depends(_require_edit
 
 
 @app.post("/api/reset")
-async def reset_data():
+async def reset_data(_=Depends(_require_edit_auth)):
     """Reset all actual times to None (testing only, disabled when DATA_BACKEND=sheets)."""
     if settings.DATA_BACKEND == "sheets":
         from fastapi import HTTPException
@@ -832,7 +832,7 @@ async def reset_data():
 
 
 @app.post("/api/reload")
-async def reload_clients():
+async def reload_clients(_=Depends(_require_edit_auth)):
     """Force all connected clients to hard-reload the page."""
     await manager.broadcast_reload()
     return {"status": "reload sent"}
