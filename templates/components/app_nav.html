@@ -1,0 +1,12 @@
+{# Shared operator/admin navigation. Included from base.html when `show_nav` is set.
+   `active_section` is one of: edit, admin, history. #}
+<nav class="app-nav">
+    <a href="/edit" class="app-nav-link{% if active_section == 'edit' %} is-active{% endif %}">Operator</a>
+    {% if data_backend == "sqlite" %}
+    <a href="/admin" class="app-nav-link{% if active_section == 'admin' %} is-active{% endif %}">Admin</a>
+    <a href="/history" class="app-nav-link{% if active_section == 'history' %} is-active{% endif %}">History</a>
+    {% endif %}
+    <span class="app-nav-spacer"></span>
+    <a href="/" class="app-nav-link app-nav-secondary">View</a>
+    <a href="/stage" class="app-nav-link app-nav-secondary">Stage</a>
+</nav>

@@ -438,6 +438,9 @@ def get_show_detail(show_id: int) -> Optional[dict]:
                     "act_name": a.act_name,
                     "scheduled_start": a.scheduled_start,
                     "scheduled_end": a.scheduled_end,
+                    "actual_start": a.actual_start,
+                    "actual_end": a.actual_end,
+                    "screentime_total_seconds": a.screentime_total_seconds,
                     "category": a.category or infer_category(a.act_name),
                 }
                 for a in show.acts

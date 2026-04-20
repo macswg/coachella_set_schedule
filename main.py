@@ -187,6 +187,8 @@ async def edit(request: Request, _=Depends(_require_edit_auth)):
     context = get_template_context(request)
     context["view_only"] = False
     context["show_time_override"] = False
+    context["show_nav"] = True
+    context["active_section"] = "edit"
     return templates.TemplateResponse(request, "index.html", context)
 
 
@@ -205,6 +207,8 @@ async def preview(request: Request):
     context = get_template_context(request)
     context["view_only"] = False
     context["show_time_override"] = True
+    context["show_nav"] = True
+    context["active_section"] = "edit"
     return templates.TemplateResponse(request, "index.html", context)
 
 
@@ -476,6 +480,8 @@ async def admin_shows(request: Request, _=Depends(_require_edit_auth)):
         "data_backend": settings.DATA_BACKEND,
         "shows": store.list_shows() if settings.DATA_BACKEND == "sqlite" else [],
         "archive_retention": settings.ARCHIVE_RETENTION_COUNT,
+        "show_nav": True,
+        "active_section": "admin",
     }
     return templates.TemplateResponse(request, "admin/shows.html", context)
 
@@ -554,6 +560,8 @@ async def admin_show_detail(show_id: int, request: Request, _=Depends(_require_e
         "data_backend": settings.DATA_BACKEND,
         "show": show,
         "act_categories": ACT_CATEGORIES,
+        "show_nav": True,
+        "active_section": "admin",
     }
     return templates.TemplateResponse(request, "admin/show_detail.html", context)
 
@@ -725,8 +733,58 @@ async def history(request: Request, _=Depends(_require_edit_auth)):
         "data_backend": settings.DATA_BACKEND,
         "entries": entries,
         "format_variance": format_variance,
+        "show_nav": True,
+        "active_section": "history",
     }
     return templates.TemplateResponse(request, "history.html", context)
+
+
+def _variance_seconds(scheduled_str, actual_str):
+    if not scheduled_str or not actual_str:
+        return None
+    from datetime import datetime as _dt, timedelta as _td
+    def _parse(s):
+        for fmt in ("%H:%M:%S", "%H:%M"):
+            try:
+                return _dt.strptime(s, fmt)
+            except ValueError:
+                continue
+        return None
+    s, a = _parse(scheduled_str), _parse(actual_str)
+    if s is None or a is None:
+        return None
+    if a < s - _td(hours=12):
+        a += _td(days=1)
+    return int((a - s).total_seconds())
+
+
+@app.get("/history/{show_id}", response_class=HTMLResponse)
+async def history_detail(show_id: int, request: Request, _=Depends(_require_edit_auth)):
+    """Per-act scheduled vs actual detail for a single show."""
+    _require_sqlite()
+    payload = store.export_show(show_id)
+    if payload is None:
+        raise HTTPException(status_code=404, detail="Show not found")
+    summary = summarize_show(payload)
+    enriched_acts = []
+    for a in payload["acts"]:
+        enriched_acts.append({
+            **a,
+            "start_variance": _variance_seconds(a.get("scheduled_start"), a.get("actual_start")),
+            "end_variance": _variance_seconds(a.get("scheduled_end"), a.get("actual_end")),
+        })
+    context = {
+        "request": request,
+        "app_version": APP_VERSION,
+        "data_backend": settings.DATA_BACKEND,
+        "show": payload,
+        "summary": summary,
+        "acts": enriched_acts,
+        "format_variance": format_variance,
+        "show_nav": True,
+        "active_section": "history",
+    }
+    return templates.TemplateResponse(request, "history_detail.html", context)
 
 
 @app.post("/api/reset")

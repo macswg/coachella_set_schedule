@@ -16,6 +16,7 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 <body>
+    {% if show_nav %}{% include "components/app_nav.html" %}{% endif %}
     {% block content %}{% endblock %}
     <footer style="text-align:center;padding:1rem 0 0.5rem;color:var(--text-muted);font-size:0.65rem;opacity:0.5;">v{{ app_version }}</footer>
     <script>

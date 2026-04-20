@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}History — {{ show.name }}{% endblock %}
+{% block content %}
+<main class="admin">
+    <header class="admin-header">
+        <h1>{{ show.name }}</h1>
+        <nav class="admin-breadcrumb"><a href="/history">History</a></nav>
+    </header>
+
+    <section class="admin-section">
+        <h2>Summary</h2>
+        <ul class="summary-stats">
+            <li><span>Sets</span><strong>{{ summary.set_count }}</strong></li>
+            <li><span>Started</span><strong>{{ summary.started_count }} ({{ summary.pct_started }}%)</strong></li>
+            <li><span>Completed</span><strong>{{ summary.completed_count }} ({{ summary.pct_completed }}%)</strong></li>
+            <li><span>Max start var.</span><strong>{{ format_variance(summary.max_start_variance_seconds) or "—" }}</strong></li>
+            <li><span>Max end var.</span><strong>{{ format_variance(summary.max_end_variance_seconds) or "—" }}</strong></li>
+            <li><span>Avg start var.</span><strong>{{ format_variance(summary.avg_start_variance_seconds) or "—" }}</strong></li>
+        </ul>
+    </section>
+
+    <section class="admin-section">
+        <h2>Per-act detail</h2>
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Act</th>
+                    <th>Category</th>
+                    <th>Scheduled</th>
+                    <th>Actual</th>
+                    <th>Start var.</th>
+                    <th>End var.</th>
+                    <th>Screentime</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in acts %}
+                <tr>
+                    <td>{{ a.act_name }}</td>
+                    <td><code>{{ a.category }}</code></td>
+                    <td>
+                        {{ a.scheduled_start or "—" }}
+                        {% if a.scheduled_end %}→ {{ a.scheduled_end }}{% endif %}
+                    </td>
+                    <td>
+                        {{ a.actual_start or "—" }}
+                        {% if a.actual_end %}→ {{ a.actual_end }}{% endif %}
+                    </td>
+                    <td class="var-cell">{{ format_variance(a.start_variance) or "—" }}</td>
+                    <td class="var-cell">{{ format_variance(a.end_variance) or "—" }}</td>
+                    <td>
+                        {% if a.screentime_total_seconds %}
+                        {{ "%d:%02d:%02d" % (a.screentime_total_seconds // 3600, (a.screentime_total_seconds % 3600) // 60, a.screentime_total_seconds % 60) }}
+                        {% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+</main>
+{% endblock %}

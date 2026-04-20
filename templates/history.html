@@ -4,7 +4,6 @@
 <main class="admin">
     <header class="admin-header">
         <h1>Show history</h1>
-        <nav><a href="/admin">&larr; Admin</a> · <a href="/edit">Operator</a></nav>
     </header>
 
     {% if data_backend != "sqlite" %}
@@ -34,7 +33,7 @@
                 {% for e in entries %}
                 <tr>
                     <td>
-                        <a href="/admin/shows/{{ e.id }}">{{ e.name }}</a>
+                        <a href="/history/{{ e.id }}">{{ e.name }}</a>
                         {% if e.is_current %}<span class="badge badge-current">current</span>{% endif %}
                         {% if e.is_archived %}<span class="badge badge-archived">archived</span>{% endif %}
                     </td>
