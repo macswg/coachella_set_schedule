@@ -38,10 +38,12 @@
             {% endif %}
         </div>
         <div class="header-right">
+            {% if artnet_configured %}
             <div class="brightness-display">
                 <span class="brightness-label">Brightness:</span>
                 <span class="brightness-value" x-text="brightness + ' nits'"></span>
             </div>
+            {% endif %}
             <div class="slip-display" :class="{ 'slip-warning': slip > 0, 'slip-ahead': slip < 0 }">
                 <span class="slip-label">Slip:</span>
                 <span class="slip-value" x-text="formatSlip(slip)"></span>
@@ -194,7 +196,9 @@ function scheduleApp() {
             this.syncClock().then(() => this.updateTime());
             setInterval(() => this.updateTime(), 1000);
             setInterval(() => this.syncClock(), 60000);
+            {% if artnet_configured %}
             this.fetchBrightness();
+            {% endif %}
             this.pollKiProStatus();
             setInterval(() => this.pollKiProStatus(), 5000);
             {% if weather_configured %}

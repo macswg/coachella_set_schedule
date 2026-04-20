@@ -180,6 +180,7 @@ def get_template_context(request: Request = None) -> dict:
         "app_version": APP_VERSION,
         "kipro_configured": bool(settings.KIPRO_IP),
         "weather_configured": bool(settings.WEATHER_URL),
+        "artnet_configured": bool(settings.ARTNET_ENABLED),
         "public_url": qr_url,
         "qr_enabled": qr_enabled,
     }
