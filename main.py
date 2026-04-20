@@ -778,6 +778,7 @@ async def history_detail(show_id: int, request: Request, _=Depends(_require_edit
         "app_version": APP_VERSION,
         "data_backend": settings.DATA_BACKEND,
         "show": payload,
+        "show_id": show_id,
         "summary": summary,
         "acts": enriched_acts,
         "format_variance": format_variance,

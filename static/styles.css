@@ -2066,3 +2066,18 @@ body {
 .stage-header .show-name-label {
     font-size: 1.2rem;
 }
+
+.history-export {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+.history-export a {
+    padding: 0.2rem 0.5rem;
+    background: var(--accent, #4ade80);
+    color: #0a0a0a;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    text-decoration: none;
+}
+.history-export a:hover { opacity: 0.85; }

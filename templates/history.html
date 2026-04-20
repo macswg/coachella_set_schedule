@@ -27,6 +27,7 @@
                     <th>Max end var.</th>
                     <th>Avg start var.</th>
                     <th>Avg end var.</th>
+                    <th>Export</th>
                 </tr>
             </thead>
             <tbody>
@@ -44,6 +45,10 @@
                     <td>{{ format_variance(e.max_end_variance_seconds) or "—" }}</td>
                     <td>{{ format_variance(e.avg_start_variance_seconds) or "—" }}</td>
                     <td>{{ format_variance(e.avg_end_variance_seconds) or "—" }}</td>
+                    <td class="history-export">
+                        <a href="/admin/shows/{{ e.id }}/export.json" title="Download JSON">JSON</a>
+                        <a href="/admin/shows/{{ e.id }}/export.csv" title="Download CSV">CSV</a>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
