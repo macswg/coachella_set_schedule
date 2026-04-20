@@ -138,6 +138,20 @@ The app supports three pluggable backends, selected at startup via `DATA_BACKEND
 2. (Optional) Set `SQLITE_PATH` to change the DB file location
 3. On first start, Alembic creates the schema. Use `/admin` to create a show and add acts.
 
+### SQLite persistence
+
+The SQLite file lives on the **host** at `./data/schedule.db`, bind-mounted into the container at `/app/data` (`docker-compose.yml:10`, plus matching mounts in both dev overrides). Container rebuilds don't touch it.
+
+- `init_db()` (`app/db/engine.py:46-64`) runs `alembic upgrade head` on startup. Migrations are idempotent — the schema is never dropped or recreated, only upgraded.
+- **Survives:** `docker compose up --build`, `docker compose restart`, `docker compose down`, even `docker compose down -v` (bind mounts to host paths ignore `-v`).
+- **Wipes data:**
+  - `rm data/schedule.db` on the host (or wiping `./data/`).
+  - Clicking **Delete** on a show in `/admin`.
+  - Archive auto-purge when the archive grows past `ARCHIVE_RETENTION_COUNT` (default 20) — oldest archived shows are pruned on `advance_show`.
+  - `POST /api/reset` — note this only clears actual start/end times on acts; it does **not** remove shows or scheduled times.
+
+`.db-journal` files next to the DB (SQLite WAL/journal) are transient and safe to ignore; `.gitignore` already excludes `data/*.db*`.
+
 The app polls Google Sheets every 30 seconds (configurable via `POLL_INTERVAL_SECONDS` in `main.py`) and broadcasts updates to all connected clients.
 
 **Multi-show tabs:** Set `SHOW_TABS` to a comma-separated list of sheet tab names (e.g. `W1Shw1,W1Shw2,W2Shw4`). The app starts on the tab named by `GOOGLE_SHEET_TAB`; if that tab is not in the list, it defaults to the first tab. Operators advance to the next show via the "Advance to Next Show" button on `/edit`, which reloads all clients.

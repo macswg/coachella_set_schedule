@@ -136,6 +136,16 @@ All settings via environment variables (`.env` file). See `.env.example` for the
 | `DATA_BACKEND` | `memory` | Store to use: `sheets`, `sqlite`, or `memory` |
 | `SQLITE_PATH` | `./data/schedule.db` | SQLite DB file (when `DATA_BACKEND=sqlite`) |
 
+### Data persistence (SQLite)
+
+The SQLite DB is stored on the host at `./data/schedule.db` and bind-mounted into the container, so it survives container rebuilds, restarts, and `docker compose down` (including `down -v`). On startup the app runs idempotent Alembic migrations — the schema is never recreated.
+
+**Things that actually remove data:**
+- `rm data/schedule.db` on the host.
+- Deleting a show from `/admin`.
+- Automatic archive purge when more than `ARCHIVE_RETENTION_COUNT` shows (default 20) sit in the archive — oldest are pruned on `advance_show`.
+- `POST /api/reset` clears recorded actual start/end times only; shows and scheduled times are preserved.
+
 **Google Sheets** (when `DATA_BACKEND=sheets`):
 | Variable | Default | Description |
 |----------|---------|-------------|
