@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.engine import get_engine
-from app.db.models import Act as ActRow, Show
+from app.db.models import Act as ActRow, AppSetting, Show
 from app.models import ACT_CATEGORIES, Act, infer_category, time_to_secs
 
 
@@ -396,6 +396,27 @@ def reset_screentime_sessions() -> None:
     """Test helper — clear in-memory screentime session tracking."""
     global _screentime_sessions
     _screentime_sessions = {}
+
+
+# ----------------------------------------------------------------------------
+# App settings (key/value runtime config editable from /admin)
+# ----------------------------------------------------------------------------
+
+def get_setting(key: str, default: Optional[str] = None) -> Optional[str]:
+    with _session() as session:
+        row = session.get(AppSetting, key)
+        return row.value if row is not None else default
+
+
+def set_setting(key: str, value: Optional[str]) -> None:
+    with _session() as session:
+        row = session.get(AppSetting, key)
+        if row is None:
+            row = AppSetting(key=key, value=value)
+            session.add(row)
+        else:
+            row.value = value
+        session.commit()
 
 
 # ----------------------------------------------------------------------------

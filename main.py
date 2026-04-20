@@ -149,10 +149,22 @@ def _require_edit_auth(credentials: Optional[HTTPBasicCredentials] = Depends(_ht
 
 
 
+def _resolve_qr_settings() -> tuple[str, bool]:
+    """Return (qr_url, qr_enabled), reading from SQLite settings when available
+    and falling back to the PUBLIC_URL env var otherwise. Default enabled=True."""
+    if settings.DATA_BACKEND == "sqlite":
+        url = store.get_setting("qr_url", settings.PUBLIC_URL) or ""
+        enabled_raw = store.get_setting("qr_enabled", "1")
+        enabled = enabled_raw not in ("0", "false", "False", "")
+        return url, enabled
+    return settings.PUBLIC_URL, True
+
+
 def get_template_context(request: Request = None) -> dict:
     """Build the common template context."""
     acts = store.get_schedule()
     slip = calculate_slip(acts)
+    qr_url, qr_enabled = _resolve_qr_settings()
     return {
         "request": request,
         "stage_name": store.get_stage_name(),
@@ -168,7 +180,8 @@ def get_template_context(request: Request = None) -> dict:
         "app_version": APP_VERSION,
         "kipro_configured": bool(settings.KIPRO_IP),
         "weather_configured": bool(settings.WEATHER_URL),
-        "public_url": settings.PUBLIC_URL,
+        "public_url": qr_url,
+        "qr_enabled": qr_enabled,
     }
 
 
@@ -474,16 +487,32 @@ def _require_sqlite():
 
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_shows(request: Request, _=Depends(_require_edit_auth)):
+    qr_url, qr_enabled = _resolve_qr_settings()
     context = {
         "request": request,
         "app_version": APP_VERSION,
         "data_backend": settings.DATA_BACKEND,
         "shows": store.list_shows() if settings.DATA_BACKEND == "sqlite" else [],
         "archive_retention": settings.ARCHIVE_RETENTION_COUNT,
+        "qr_url": qr_url,
+        "qr_enabled": qr_enabled,
         "show_nav": True,
         "active_section": "admin",
     }
     return templates.TemplateResponse(request, "admin/shows.html", context)
+
+
+@app.post("/admin/settings/qr")
+async def admin_update_qr_settings(request: Request, _=Depends(_require_edit_auth)):
+    _require_sqlite()
+    form = await request.form()
+    url = (form.get("qr_url") or "").strip()
+    enabled = "1" if form.get("qr_enabled") else "0"
+    store.set_setting("qr_url", url)
+    store.set_setting("qr_enabled", enabled)
+    await manager.broadcast_reload()
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse("/admin", status_code=303)
 
 
 @app.post("/admin/shows")

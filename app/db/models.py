@@ -54,3 +54,11 @@ class RecordingEvent(Base):
     act_id: Mapped[Optional[int]] = mapped_column(ForeignKey("acts.id", ondelete="SET NULL"), nullable=True)
     event_type: Mapped[str] = mapped_column(String, nullable=False)
     fired_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+
+
+class AppSetting(Base):
+    """Key/value runtime settings editable from /admin."""
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String, primary_key=True)
+    value: Mapped[Optional[str]] = mapped_column(String, nullable=True)
